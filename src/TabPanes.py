@@ -623,7 +623,7 @@ class import_pane(Frame):
 
 threadLock = threading.Lock()
 class refresh_thread(threading.Thread):
-    def __init__(self, pane, typ):
+    def __init__(self, pane, typ=None):
         threading.Thread.__init__(self)
         self.pane=pane
         self.type=typ

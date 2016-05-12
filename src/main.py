@@ -117,6 +117,13 @@ class LoginForm(Toplevel):
         if self.parent is not None:
             self.parent.focus_set()
         self.destroy()
+        
+        if pg_db.get_conn():
+            pg_db.close()
+            
+        if mbom_db.get_conn():          
+            mbom_db.close()
+            
         sys.exit()
         
     def ok(self, event=None):
