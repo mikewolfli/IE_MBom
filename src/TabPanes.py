@@ -776,8 +776,7 @@ class mat_fin_pane(Frame):
         self.grid()
         self.columnconfigure(7, weight=1)
         self.rowconfigure(3, weight=1)
-
-         
+       
         self.mat_list.bind('<Alt-c>', self.copy_mat_list)
         self.mat_list.bind('<Alt-C>', self.copy_mat_list)
         self.mat_list.bind('<Control-c>', self.copy_list)

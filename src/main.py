@@ -181,11 +181,9 @@ class mainframe(Frame):
         ysb.grid(row=0, column=1, sticky=NS)
         xsb.grid(row=1,column=0, sticky=EW)
         
-        i=0
         tree_root = self.tree.insert('','end', text='操作列表', open =True)
         for item in tree_items:
-            self.tree.insert(tree_root, 'end', text=item, values=(i), open=False)
-            i+=1
+            self.tree.insert(tree_root, 'end', text=item, values=(-1), open=False)
         
         self.ntbook.grid(row=0, column=2, rowspan=2, sticky=NSEW)
         self.rowconfigure(0, weight=1)
@@ -221,27 +219,51 @@ class mainframe(Frame):
         if not select :
             return
         
-        select=select[0]
-        i_per = int(self.tree.item(select, 'values')[0])
+        sel=select[0]
+        i_per = int(self.tree.item(sel, 'values')[0])
         s_perm = login_info['perm']
-            
-        if int(s_perm[i_per]) <= 0:
-            self.st_msg.set('没有权限')
-            return
+                      
+        i_sel = self.ntbook.index(END)
         
-        if not self.import_tab:
-            self.import_tab = import_pane(self) 
-            self.ntbook.add(self.import_tab, text='物料导入表', sticky=NSEW)
-            self.ntbook.hide(0)
-        if not self.operat_tab:
-            self.operat_tab = mat_fin_pane(self)
-            self.ntbook.add(self.operat_tab, text='IE项目列表', sticky=NSEW) 
-            self.ntbook.hide(1)
-        if not self.proj_release_tab:
-            self.proj_release_tab = proj_release_pane(self)
-            self.ntbook.add(self.proj_release_tab, text='项目release', sticky=NSEW) 
-            self.ntbook.hide(2)
-                               
+        if i_per==-1:
+            nt_title=self.tree.item(sel, 'text')
+            i_index=tree_items.index(nt_title)
+            if i_index==0:
+                if not self.import_tab and int(s_perm[i_index])>0:
+                    self.import_tab = import_pane(self) 
+                    self.ntbook.add(self.import_tab, text=nt_title, sticky=NSEW)
+                    print(i_index)
+                    self.tree.set(sel, 'col0', i_sel)
+                    self.ntbook.select(i_index)
+                else:
+                    self.st_msg.set('没有权限')
+                    return
+            elif i_index==1:
+                if not self.operat_tab and int(s_perm[i_index])>0:
+                    self.operat_tab = mat_fin_pane(self)
+                    self.ntbook.add(self.operat_tab, text=nt_title, sticky=NSEW) 
+                    self.tree.set(sel, 'col0', i_sel)
+                    self.ntbook.select(i_index)
+                else:
+                    self.st_msg.set('没有权限')
+                    return
+            elif i_index==2:
+                if not self.proj_release_tab and int(s_perm[i_index])>0:
+                    self.proj_release_tab = proj_release_pane(self)
+                    self.ntbook.add(self.proj_release_tab, text=nt_title, sticky=NSEW) 
+                    self.tree.set(sel, 'col0', i_sel)
+                    self.ntbook.select(i_index)
+                else:
+                    self.st_msg.set('没有权限')
+                    return 
+        else:
+            if int(s_perm[i_per]) <= 0:
+                self.st_msg.set('没有权限')
+                return
+                
+            self.ntbook.select(i_per)
+
+        '''                       
         if i_per ==0:
             self.ntbook.add(self.import_tab)
         elif i_per ==1:
@@ -249,7 +271,8 @@ class mainframe(Frame):
         elif i_per ==2:
             self.ntbook.add(self.proj_release_tab)
             
-        self.ntbook.select(i_per)          
+        self.ntbook.select(i_per)  
+'''        
     
         
 class Application():
