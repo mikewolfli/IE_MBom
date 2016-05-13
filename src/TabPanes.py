@@ -123,8 +123,12 @@ class import_pane(Frame):
         rows = ws1.max_row-1
         for rx in range(rows):
             mr_line = {} 
-            r_str = ws1.cell(row=rx+4, column=7).value
- 
+            
+            try:
+                r_str = ws1.cell(row=rx+4, column=7).value
+            except:
+                break
+            
             if r_str is None:
                 break
             
