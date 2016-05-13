@@ -1400,12 +1400,13 @@ class proj_release_pane(Frame):
         self.release_button=Button(self, text='项目release')
         self.release_button.grid(row=0, column=2, sticky=NSEW)
         self.release_button['command']= self.release_prj
-        if login_info['perm'][0]!='2' and login_info['perm'][0]!='9':
+        if login_info['perm'][2]!='2' and login_info['perm'][2]!='9':
             self.release_button.grid_forget()  
         
         self.delivery_button=Button(self, text='发运完成')
         self.delivery_button.grid(row=1, column=3, sticky=NSEW)
-        if login_info['perm'][0]!='3' and login_info['perm'][0]!='9':
+        self.delivery_button['command']=self.delivery
+        if login_info['perm'][2]!='3' and login_info['perm'][2]!='9':
             self.delivery_button.grid_forget()  
             
         info_label = Label(filter_body, text='红色背景-暂停项目;绿色背景-加急项目;\n黄色背景-精益项目;天蓝色:pre-engineer项目')
@@ -1574,7 +1575,31 @@ class proj_release_pane(Frame):
         finally:
             # make sure to release the grab (Tk 8.0a1 only)
             self.popup.grab_release() 
+    
+    def delivery(self):
+        if self.sel_index !=1:
+            messagebox.showwarning('提示', '请在选项中选择已经release的项目')
+            return
+        
+        sel_items = self.wbs_list.selection()
+        error=[]
+        for item in sel_items:
+            i = project_cols.index('col2')
+            wbs = self.wbs_list.item(item, 'values')[i]
             
+            q = UnitInfo.update(status=8, modify_emp=login_info['uid'], modify_date=datetime.datetime.now()).where(UnitInfo.wbs_no==wbs)
+            j= q.execute() 
+            if j==0:
+                error.append(wbs)
+            else:
+                self.wbs_dic.pop(wbs)
+                self.wbs_list.delete(item)
+                self.wbs_keys.remove(wbs)
+        i_count=len(sel_items)
+        i_fail =len(error)
+        
+        messagebox.showinfo('delivery结果','delivery成功:'+str(i_count-i_fail)+';失败:'+str(i_fail))
+        
     def release_prj(self):
         if self.sel_index !=0:
             messagebox.showwarning('提示', '请在选项中选择已经Close但未release的项目')
