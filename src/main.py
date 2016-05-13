@@ -234,7 +234,7 @@ class mainframe(Frame):
                     self.ntbook.add(self.import_tab, text=nt_title, sticky=NSEW)
                     print(i_index)
                     self.tree.set(sel, 'col0', i_sel)
-                    self.ntbook.select(i_index)
+                    self.ntbook.select(i_sel)
                 else:
                     self.st_msg.set('没有权限')
                     return
@@ -243,7 +243,7 @@ class mainframe(Frame):
                     self.operat_tab = mat_fin_pane(self)
                     self.ntbook.add(self.operat_tab, text=nt_title, sticky=NSEW) 
                     self.tree.set(sel, 'col0', i_sel)
-                    self.ntbook.select(i_index)
+                    self.ntbook.select(i_sel)
                 else:
                     self.st_msg.set('没有权限')
                     return
@@ -252,7 +252,7 @@ class mainframe(Frame):
                     self.proj_release_tab = proj_release_pane(self)
                     self.ntbook.add(self.proj_release_tab, text=nt_title, sticky=NSEW) 
                     self.tree.set(sel, 'col0', i_sel)
-                    self.ntbook.select(i_index)
+                    self.ntbook.select(i_sel)
                 else:
                     self.st_msg.set('没有权限')
                     return 
