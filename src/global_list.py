@@ -17,7 +17,9 @@ import tkinter.ttk as ttk
 from mbom_dataset import *
 from openpyxl import Workbook, load_workbook, reader
 import openpyxl.writer.excel as excel_xlsx
-from tkintertable import *
+#from tkintertable import *
+import pandas as pd
+from pandastable import Table, TableModel
 import threading
 import time
 import functools

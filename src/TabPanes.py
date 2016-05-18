@@ -74,16 +74,14 @@ class import_pane(Frame):
         self.wl_entry = Entry(self, textvariable=self.wl_str)
         self.wl_entry.grid(row=0, column=6, sticky = EW)
         self.wl_entry.bind("<Return>", self.wl_result)
-        self.mat_list = TableModel()
+        model = TableModel(rows=0, columns=0)
 
         for colname in col_header:
-            self.mat_list.addColumn(colname)
-        self.mat_list.addRow()
+            model.addColumn(colname)
+        model.addRow(1)
         table_panel = Frame(self)
-        self.mat_table = TableCanvas(table_panel, self.mat_list, cellwidth=150, 
-                                     cellbackgr='#e3f698',rowheaderwidth=30,
-                                     rowselectedcolor='yellow', editable=False)
-        self.mat_table.createTableFrame()
+        self.mat_table = Table(table_panel, model, editable=False)
+        self.mat_table.show()
 
         self.mat_table.grid(row=0, column=0, rowspan=2, columnspan=2, sticky=NSEW)
         table_panel.columnconfigure(1, weight=1)
@@ -100,12 +98,12 @@ class import_pane(Frame):
 
         self.mr_rows = 0
         self.mat_dic={}
-        self.mat_list.deleteRows()
         self.nstd_app_id = []
         for file in file_list:
             self.read_excel_file(file)
-        self.mat_list.importDict(self.mat_dic) 
-        self.mat_table.createTableFrame()
+        model = TableModel(dataframe=self.df.T)
+        self.mat_table.updateModel(model)
+        self.mat_table.redraw()
 
     def read_excel_file(self, file):
         wb = load_workbook(file, read_only=True, data_only=True)
@@ -169,6 +167,8 @@ class import_pane(Frame):
             self.cs_set.append(mr_line)
             self.mat_dic[self.mr_rows+1]=mr_line
             self.mr_rows+=1
+            
+        self.df = pd.DataFrame(self.mat_dic,index=col_header, columns=[ i for i in range(1, self.mr_rows+1)])
             
         self.scan_list()
         for item in self.cs_set:
@@ -397,6 +397,8 @@ class import_pane(Frame):
             self.mat_dic[self.mr_rows+1]=mr_line
 
             self.mr_rows+=1
+            
+        self.df = pd.DataFrame(self.mat_dic,index=col_header, columns=[ i for i in range(1,self.mr_rows+1)])
 
         return True
 
@@ -456,8 +458,7 @@ class import_pane(Frame):
 
     def wl_result(self, event):
         self.mr_rows = 0
-        self.mat_dic.clear()
-        self.mat_list.deleteRows()
+        self.mat_dic = {}
         s_str = self.wl_str.get()
 
         if s_str:
@@ -486,9 +487,12 @@ class import_pane(Frame):
                         
                     self.mat_dic[self.mr_rows+1]=mr_line
                     self.mr_rows+=1
-
-        self.mat_list.importDict(self.mat_dic) 
-        self.mat_table.createTableFrame()
+    
+        t_index= [ i for i in range(1, self.mr_rows+1)]
+        self.df = pd.DataFrame(data=self.mat_dic,index=col_header, columns=t_index)
+        model = TableModel(dataframe=self.df.T)
+        self.mat_table.updateModel(model)
+        self.mat_table.redraw()
 
     def clu_p_button(self):
         #self.set_justify(1)
@@ -540,7 +544,6 @@ class import_pane(Frame):
     def set_justify(self, choice, mats):        
         self.mr_rows=0
         self.mat_dic={}
-        self.mat_list.deleteRows()
 
         for mat in mats:
             try:
@@ -575,8 +578,10 @@ class import_pane(Frame):
                     mr_line[col_header[10]]=r.app_person
                 self.mat_dic[self.mr_rows+1]=mr_line
             self.mr_rows+=1 
-        self.mat_list.importDict(self.mat_dic) 
-        self.mat_table.createTableFrame()                        
+        self.df = pd.DataFrame(self.mat_dic,index=col_header, columns=[ i for i in range(1, self.mr_rows+1)])
+        model=TableModel(dataframe=self.df.T)
+        self.mat_table.updateModel(model)
+        self.mat_table.redraw()                     
 
     ''' 
     def set_justify(self, val):
@@ -624,7 +629,7 @@ class import_pane(Frame):
         self.mat_table.createTableFrame()  
     '''
 
-
+#threads=[]
 threadLock = threading.Lock()
 class refresh_thread(threading.Thread):
     def __init__(self, pane, typ=None):
@@ -833,7 +838,7 @@ class mat_fin_pane(Frame):
         
         return head
                       
-    def __export_excel(self):
+    def __export_excel(self):           
         items = self.mat_list.get_children('')
         if not items:
             return
@@ -852,6 +857,8 @@ class mat_fin_pane(Frame):
         for i in range(col_size):
             ws.cell(row=1,column=i+1).value=tree_head[i]  
         ws.cell(row=1, column=col_size+1).value = '关联WBS'
+        ws.cell(row=1, column=col_size+2).value = '合同号'
+        ws.cell(row=1, column=col_size+3).value = '项目名称'
         n=0 
         
         dic_str = {}
@@ -869,7 +876,12 @@ class mat_fin_pane(Frame):
                 s_str = self.combine_wbs(self.nstd_res[nstd_id])
                 dic_str[nstd_id]=s_str
                 
-            ws.cell(row=n+2, column=col_size+1).value = dic_str[nstd_id]            
+            ws.cell(row=n+2, column=col_size+1).value = dic_str[nstd_id]
+            if dic_str[nstd_id].startswith('E/'):
+                wbs = self.nstd_res[nstd_id][0]
+                prj_info = self.wbs_res[wbs]               
+                ws.cell(row=n+2, column=col_size+2).value = prj_info[1]
+                ws.cell(row=n+2, column=col_size+3).value = prj_info[2]
             n+=1
 
         if excel_xlsx.save_workbook(workbook=wb, filename=file_str):
@@ -1044,7 +1056,7 @@ class mat_fin_pane(Frame):
 
         item=[]
         try:
-            result = LProcAct.select(LProcAct.finish_date).where((LProcAct.instance==index)&(LProcAct.action=='AT00000020')).get()
+            result = LProcAct.select(LProcAct.finish_date).where((LProcAct.instance==index)&(LProcAct.action=='AT00000015')).get()
             s_date = result.finish_date
         except LProcAct.DoesNotExist:
             s_date=''
@@ -1052,7 +1064,7 @@ class mat_fin_pane(Frame):
         item.append(s_date)
 
         try:
-            result = LProcAct.select(LProcAct.finish_date).where((LProcAct.instance==index)&(LProcAct.action=='AT00000015')).get()
+            result = LProcAct.select(LProcAct.finish_date).where((LProcAct.instance==index)&(LProcAct.action=='AT00000020')).get()
             s_date = result.finish_date
         except LProcAct.DoesNotExist:
             s_date=''
@@ -1178,7 +1190,8 @@ class mat_fin_pane(Frame):
     def __refresh_tree(self):        
         data_thread= refresh_thread(self)
         data_thread.setDaemon(True)
-        data_thread.start()        
+        data_thread.start()
+        #threads.append(data_thread)
 
     def __loop_refresh(self):
         self.__refresh_tree()
@@ -1787,7 +1800,8 @@ class proj_release_pane(Frame):
     def __refresh_list(self):
         prj_thread= refresh_thread(self)
         prj_thread.setDaemon(True)
-        prj_thread.start()   
+        prj_thread.start()
+        #threads.append(prj_thread)
 
     def __loop_refresh(self):
         self.__refresh_list()

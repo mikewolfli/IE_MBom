@@ -283,7 +283,10 @@ class Application():
         main_frame.grid(row=0, column=0, sticky=NSEW)
         LoginForm(main_frame, '用户登陆')
         #popup.attributes("-toolwindow",1)
-        #popup.wm_attributes("-topmost",1)        
+        #popup.wm_attributes("-topmost",1)
+
+        #for t in threads:
+        #    t.join()
         
         root.protocol("WM_DELETE_WINDOW", self.quit_func)
 
@@ -295,6 +298,7 @@ class Application():
             log_loger = login_log.update(logout_time = datetime.datetime.now(), log_status=False).where((login_log.employee==login_info['uid'])&(login_log.log_status==True))
             log_loger.execute()            
             mbom_db.close()
+            
         root.destroy()
                 
 if __name__ == '__main__':   
