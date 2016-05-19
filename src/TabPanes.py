@@ -67,6 +67,9 @@ class import_pane(Frame):
         self.tm_m = Button(self.widgets_group2, text='曳引机自制')
         self.tm_m.pack(side='left')
         self.tm_m['command']=self.tm_m_button
+        self.fin_button = Button(self.widgets_group2, text='直接关闭物料')
+        self.fin_button.pack(side='left')
+        self.fin_button['command']=self.mat_close
         if login_info['perm'][0]!='3' and login_info['perm'][0]!='9':
             self.widgets_group2.grid_forget()
 
@@ -540,8 +543,40 @@ class import_pane(Frame):
             return
 
         self.set_justify(5, d)
-
-    def set_justify(self, choice, mats):        
+        
+    def mat_close(self):
+        d = ask_list('物料拷贝器')
+        if not d:
+            return
+                
+        comment = simpledialog.askstring('原因','此操作不可逆，请谨慎！\n输入关闭原因:')
+        if not comment:
+            return
+        
+        i_error=0
+        i_succ=0
+        error_list=''
+        for mat in d:
+            try:
+                r=nstd_mat_fin.get(nstd_mat_fin.mat_no==mat)
+            except nstd_mat_fin.DoesNotExist:
+                i_error+=1
+                error_list=error_list+mat+';'
+                continue
+            
+            if r.justify>0:    
+                s = nstd_mat_fin.update(co_run_fin=True,co_run_fin_on=datetime.datetime.now(), co_run_fin_by=login_info['uid'], co_run_fin_remark=none2str(comment)).where(nstd_mat_fin.mat_no==mat)
+            else:
+                s = nstd_mat_fin.update(justify=13, co_run_fin=True,co_run_fin_on=datetime.datetime.now(), co_run_fin_by=login_info['uid'], co_run_fin_remark=none2str(comment)).where(nstd_mat_fin.mat_no==mat)
+            if s.execute()==0:
+                i_error+=1
+                error_list=error_list+mat+';'
+            else:
+                i_succ+=1
+        
+        messagebox.showinfo('结果', '处理完成('+str(i_error+i_succ)+'):成功('+str(i_succ)+')!失败('+str(i_error)+'):'+error_list+'!')
+            
+    def set_justify(self, choice, mats, comment=None):        
         self.mr_rows=0
         self.mat_dic={}
 
@@ -640,7 +675,18 @@ class refresh_thread(threading.Thread):
     def run(self):
         threadLock.acquire()
         self.pane.refresh()
-        threadLock.release()
+        threadLock.release()  
+        
+threadLock1 = threading.Lock()
+class export_thread(threading.Thread):
+    def __init__(self, pane):
+        threading.Thread.__init__(self)
+        self.pane=pane
+
+    def run(self):
+        threadLock1.acquire()
+        self.pane.export()
+        threadLock1.release()  
 
 display_col=['col0','col1','col2','col3','col4','col5','col6','col7','col8','col9','col10','col11','col21','col22','col23','col24','col25','col26']
 cols = ['col0','col1','col2','col3','col4','col5','col6','col7','col8','col9','col10','col11','col12','col13','col14','col15','col16','col17','col18','col19','col20','col21','col22','col23','col24','col25','col26']
@@ -655,6 +701,8 @@ class mat_fin_pane(Frame):
      wbs_res-{wbs_no: [unit_info],....}
 
     '''
+    data_thread = None
+    b_finished=False
     mat_res={}
     nstd_res={}
     wbs_res={} #存储unit wbs相关信息， key-wbs no, value-列表[wbs no, 合同号， 项目名称， 梯号，梯型，载重，速度，非标类型，是否紧急，项目交货期，要求配置完成日期]
@@ -719,11 +767,23 @@ class mat_fin_pane(Frame):
 
         self.refresh_button=Button(self, text='手动刷新')
         self.refresh_button.grid(row=1, column=6, sticky=EW)
-        self.refresh_button['command']=self.__refresh_tree
+        self.refresh_button['command']=self.refresh_by_hand
 
         self.export_button=Button(self, text='导出EXCEL')
         self.export_button.grid(row=0, column=6,  sticky=EW)
         self.export_button['command']=self.__export_excel
+        '''
+        self.export_direct=Button(self, text='直接导出已完成清单')
+        self.export_direct.grid(row=0,column=7, sticky=EW)
+        self.export_direct['command']=self.direct_export
+        if login_info['perm'][1]!='1' and login_info['perm'][1]!='9':
+            self.export_direct.grid_forget()        
+        '''       
+        self.export_finished=Button(self, text='已完成清单\n(按CO run完成日期筛选)')
+        self.export_finished.grid(row=1,column=7, sticky=EW)
+        self.export_finished['command']=self.get_finished 
+        if login_info['perm'][1]!='1' and login_info['perm'][1]!='9':
+            self.export_finished.grid_forget()
 
         if login_info['perm'][1]=='1' or login_info['perm'][1]=='5' or login_info['perm'][1]=='9':
             display_col.insert(-6,'col12')
@@ -778,12 +838,12 @@ class mat_fin_pane(Frame):
         self.mat_list.column('col26', width=80, anchor='w')
         ysb = ttk.Scrollbar(self, orient='vertical', command=self.mat_list.yview)
         xsb = ttk.Scrollbar(self, orient='horizontal', command=self.mat_list.xview)  
-        self.mat_list.grid(row=2, column=0, rowspan=2, columnspan=8, sticky='nsew')
+        self.mat_list.grid(row=2, column=0, rowspan=2, columnspan=9, sticky='nsew')
         
-        ysb.grid(row=2, column=8,rowspan=2, sticky='ns')
-        xsb.grid(row=4, column=0, columnspan=8, sticky='ew')    
+        ysb.grid(row=2, column=9,rowspan=2, sticky='ns')
+        xsb.grid(row=4, column=0, columnspan=9, sticky='ew')    
         self.grid()
-        self.columnconfigure(7, weight=1)
+        self.columnconfigure(8, weight=1)
         self.rowconfigure(3, weight=1)
        
         self.mat_list.bind('<Alt-c>', self.copy_mat_list)
@@ -838,7 +898,11 @@ class mat_fin_pane(Frame):
         
         return head
                       
-    def __export_excel(self):           
+    def __export_excel(self): 
+        if self.data_thread.is_alive():
+            messagebox.showinfo('提示','表单刷新线程正在后台刷新列表，请等待完成后再点击!')
+            return
+            
         items = self.mat_list.get_children('')
         if not items:
             return
@@ -887,6 +951,22 @@ class mat_fin_pane(Frame):
         if excel_xlsx.save_workbook(workbook=wb, filename=file_str):
             messagebox.showinfo("输出","成功输出!")  
 
+    def direct_export(self):
+        pass
+    
+    def get_finished(self):
+        if self.data_thread.is_alive():
+            messagebox.showinfo('提示','表单刷新线程正在后台刷新列表，请等待完成后再点击!')
+            return
+            
+        date_ctrl = date_picker(self)
+        self.sel_range = date_ctrl.result
+        if not self.sel_range:
+            return
+            
+        self.b_finished=True
+        self.__refresh_tree()
+    
     def metal_fin(self):
         #self.choice=1
         self.__mat_update(1)
@@ -960,18 +1040,21 @@ class mat_fin_pane(Frame):
         self.nstd_temp_res={}
 
         if login_info['perm'][1]=='2':
-            mat_items=nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).where((nstd_mat_fin.justify==3)&(nstd_mat_fin.mbom_fin==False)).naive()
+            mat_items=nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).where((nstd_mat_fin.justify==3)&(nstd_mat_fin.mbom_fin==False)&(nstd_mat_fin.co_run_fin==False)).naive()
         elif login_info['perm'][1]=='3':
-            mat_items=nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).where((nstd_mat_fin.justify==4)&(nstd_mat_fin.mbom_fin==False)).naive()
+            mat_items=nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).where((nstd_mat_fin.justify==4)&(nstd_mat_fin.mbom_fin==False)&(nstd_mat_fin.co_run_fin==False)).naive()
         elif login_info['perm'][1]=='4':
-            mat_items=nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).where(((nstd_mat_fin.justify==1)|(nstd_mat_fin.justify==2)|(nstd_mat_fin.justify==6))&(nstd_mat_fin.pu_price_fin==False)).naive()
+            mat_items=nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).where(((nstd_mat_fin.justify==1)|(nstd_mat_fin.justify==2)|(nstd_mat_fin.justify==6))&(nstd_mat_fin.pu_price_fin==False)&(nstd_mat_fin.co_run_fin==False)).naive()
         elif login_info['perm'][1]=='5':
             mat_items=nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin)\
                 .where(((((nstd_mat_fin.justify==1)|(nstd_mat_fin.justify==2)|(nstd_mat_fin.justify==6))&(nstd_mat_fin.pu_price_fin==True))|(((nstd_mat_fin.justify==3)|(nstd_mat_fin.justify==4)|(nstd_mat_fin.justify==5))&(nstd_mat_fin.mbom_fin==True)))&(nstd_mat_fin.co_run_fin==False)).naive()
         elif login_info['perm'][1]=='6':
-            mat_items=nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).where((nstd_mat_fin.justify==5)&(nstd_mat_fin.mbom_fin==False)).naive()  
+            mat_items=nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).where((nstd_mat_fin.justify==5)&(nstd_mat_fin.mbom_fin==False)&(nstd_mat_fin.co_run_fin==False)).naive()  
         elif login_info['perm'][1]=='1' or login_info['perm'][1]=='9':
-            mat_items=nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).where((nstd_mat_fin.justify>=0)&(nstd_mat_fin.co_run_fin==False)).naive()            
+            if not self.b_finished:
+                mat_items=nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).where((nstd_mat_fin.justify>=0)&(nstd_mat_fin.co_run_fin==False)).naive()
+            else:
+                mat_items=nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).where((nstd_mat_fin.justify>=0)&(nstd_mat_fin.co_run_fin==True)&(nstd_mat_fin.co_run_fin_on>=self.sel_range['from'])&(nstd_mat_fin.co_run_fin_on<=self.sel_range['to'])).naive()
         else: 
             return False
 
@@ -1188,12 +1271,27 @@ class mat_fin_pane(Frame):
                 self.mat_list.insert(parent, END, values=self.wbs_res[wbs])
 
     def __refresh_tree(self):        
-        data_thread= refresh_thread(self)
-        data_thread.setDaemon(True)
-        data_thread.start()
+        self.data_thread= refresh_thread(self)
+        self.data_thread.setDaemon(True)
+        self.data_thread.start()
         #threads.append(data_thread)
+    
+    def refresh_by_hand(self):
+        if self.data_thread.is_alive():
+            messagebox.showinfo('提示','表单刷新线程正在后台刷新列表，请等待完成后再点击!')
+            return
+            
+        self.b_finished=False
+        self.__refresh_tree()
 
     def __loop_refresh(self):
+        if not self.data_thread:
+            pass
+        elif self.data_thread.is_alive():
+            messagebox.showinfo('提示','表单刷新线程正在后台运行, 15分钟后自动刷新进程重新启动!')
+            time.sleep(900)
+            
+        self.b_finished=False
         self.__refresh_tree()
         self.mat_list.after(1800000, self.__loop_refresh)
         #self.mat_list.after(10000, self.__loop_refresh)
@@ -1265,7 +1363,7 @@ class mat_fin_pane(Frame):
     def copy_clip_process(self):
         wbs_sel = WBSSelDialog(self, 'WBS List粘贴')
 
-    def __mat_list(self,choice, mats):
+    def __mat_list(self,choice, mats, comment=None):
         s_error=''
         i_error=0
         i_suss=0
@@ -1280,7 +1378,7 @@ class mat_fin_pane(Frame):
 
         if i_suss>=1:
             self.__refresh_tree()
-
+        
     def __mat_update(self, choice):
         items = self.mat_list.selection()
         if not items: 
@@ -1312,7 +1410,7 @@ class mat_fin_pane(Frame):
         if i_suss>=1:
             self.__refresh_tree()
 
-    def process_mat_status(self, mat, method, value=True):
+    def process_mat_status(self, mat, method, value=True, comment=None):
         """
           method - 1 m_bom_fin 操作
                    2 pu_price_fin 操作
@@ -1344,7 +1442,7 @@ class mat_fin_pane(Frame):
                 if mat_mbom_fin==value:
                     return 2
                 else:
-                    s = nstd_mat_fin.update(mbom_fin=value,mbom_fin_on=datetime.datetime.now(), mbom_fin_by=login_info['uid']).where(nstd_mat_fin.mat_no==mat)
+                    s = nstd_mat_fin.update(mbom_fin=value,mbom_fin_on=datetime.datetime.now(), mbom_fin_by=login_info['uid'], mbom_fin_remark=none2str(comment)).where(nstd_mat_fin.mat_no==mat)
                     i_u=s.execute()               
             else:
                 return -2
@@ -1353,7 +1451,7 @@ class mat_fin_pane(Frame):
                 if mat_pu_price_fin ==value:
                     return 2
                 else:
-                    s = nstd_mat_fin.update(pu_price_fin=value,pu_price_fin_on=datetime.datetime.now(), pu_price_fin_by=login_info['uid']).where(nstd_mat_fin.mat_no==mat)
+                    s = nstd_mat_fin.update(pu_price_fin=value,pu_price_fin_on=datetime.datetime.now(), pu_price_fin_by=login_info['uid'], pu_price_fin_remark=none2str(comment)).where(nstd_mat_fin.mat_no==mat)
                     i_u=s.execute()  
             else: 
                 return -2
@@ -1370,7 +1468,7 @@ class mat_fin_pane(Frame):
             if mat_co_run_fin == value:
                 return 2
             else:
-                s = nstd_mat_fin.update(co_run_fin=value,co_run_fin_on=datetime.datetime.now(), co_run_fin_by=login_info['uid']).where(nstd_mat_fin.mat_no==mat)
+                s = nstd_mat_fin.update(co_run_fin=value,co_run_fin_on=datetime.datetime.now(), co_run_fin_by=login_info['uid'], co_run_fin_remark=none2str(comment)).where(nstd_mat_fin.mat_no==mat)
                 i_u=s.execute()              
         else:
             return method

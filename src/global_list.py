@@ -24,6 +24,7 @@ import threading
 import time
 import functools
 import ctypes
+from tkcalendar import *
 
 
 login_info ={'uid':'','pwd':'','status':False,'perm':'0000'}
@@ -38,7 +39,57 @@ login_info ={'uid':'','pwd':'','status':False,'perm':'0000'}
 4 - PSM
 5 - CO Run
 6 - 曳引机自制
-'''           
+'''  
+
+class date_picker(Dialog): 
+    result=None
+    def body(self, master):
+        from_label=Label(master,text='from')
+        from_label.grid(row=0, column=0, sticky=EW)
+        self.from_var = StringVar()
+        self.from_input = Entry(master,textvariable=self.from_var,state='readonly')
+        self.from_input.grid(row=0, column=1, columnspan=2, sticky=EW)
+        to_label=Label(master, text='to')
+        to_label.grid(row=1, column=0, sticky=EW)
+        self.to_var = StringVar()
+        self.to_input = Entry(master, textvariable=self.to_var, state='readonly')
+        self.to_input.grid(row=1, column=1, columnspan=2, sticky=EW)
+        self.from_button=Button(master, text='...')
+        self.from_button['command']=self.from_click
+        self.from_button.grid(row=0, column=3)
+        self.to_button=Button(master,text='...')
+        self.to_button['command']=self.to_click
+        self.to_button.grid(row=1, column=3)
+        self.from_var.set(strdate)
+        self.to_var.set(strdate)
+        return self.from_button
+        
+    def from_click(self):
+        tkCalendar(self, year, month, day, self.from_var )
+        
+    def to_click(self):
+        tkCalendar(self, year, month, day, self.to_var )        
+        
+    def validate(self):
+        self.from_date = str2date(self.from_var.get())
+        self.to_date=str2date(self.to_var.get())
+        if self.from_date is None or self.to_date is None:
+            messagebox.showerror('提示','请务必选择一个日期')
+            return 0
+        
+        if self.from_date > datetime.datetime.today() or self.to_date > datetime.datetime.today():
+            messagebox.showerror('提示','请选择早于今天的日期')
+            return 0
+            
+        if self.from_date>self.to_date:
+            messagebox.showerror('提示','from日期请务必小于to日期')
+            return 0
+            
+        return 1
+        
+    def apply(self):        
+        self.result={'from':self.from_date, 'to':self.to_date}
+        
 def format_system_message(errno):
     """
     Call FormatMessage with a system error number to retrieve
@@ -207,13 +258,13 @@ def datetime2str(dt_s):
         return dt_s.strftime("%Y-%m-%d %H:%M:%S") 
     
 def str2date(dt_s):
-    if dt_s is None:
+    if dt_s is None or (len(dt_s)==0 and isinstance(dt_s, str)):
         return None
     else:
         return datetime.datetime.strptime(dt_s , '%Y-%m-%d')
     
 def str2datetime(dt_s):
-    if dt_s is None:
+    if dt_s is None or (len(dt_s)==0 and isinstance(dt_s, str)) :
         return None
     else:
         return datetime.datetime.strptime(dt_s, "%Y-%m-%d %H:%M:%S") 
