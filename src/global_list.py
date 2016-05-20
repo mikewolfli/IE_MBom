@@ -174,7 +174,7 @@ class ScrolledTextDlg(Dialog):
         self.textfield.bind_all('<Control-v>', self.copy_ev) 
         self.textfield.bind('<Control-V>', self.copy_ev) 
         self.textfield.bind("<Next>", self.change_line)
-        self.textfield.bind("<Alt_L>", self.change_line)
+        self.textfield.bind("<Alt-L>", self.change_line)
           
         if self.initialvalue is not None:
             self.textfield.delete('1.0',END)
@@ -199,6 +199,7 @@ class ScrolledTextDlg(Dialog):
         res_list = result.split('\n')
         
         res_res=[]
+        count=0
         for res in res_list:
             if len(res.rstrip())==0:
                 continue
@@ -212,11 +213,17 @@ class ScrolledTextDlg(Dialog):
                 if not(48 <= ord(l[i]) <= 57): 
                     messagebox.showwarning("Illegal value", '请输入数值')
                     return 0
-                
+                    
+            count+=1                
             res_res.append(res.rstrip())
-            
-        self.result=res_res
+
+        if count==0:
+            return 0
+                   
+        if messagebox.askyesno('是否继续','执行数据数量: '+str(count)+' 条;此操作不可逆，是否继续(YES/NO)?')==NO:
+            return 0
         
+        self.result=res_res
         return 1
     
     def destroy(self):

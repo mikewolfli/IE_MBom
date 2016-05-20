@@ -1388,7 +1388,8 @@ class mat_fin_pane(Frame):
             self.__mat_list(choice, d)            
             return
 
-        if messagebox.askyesno('确认执行','此操作不可逆，确认执行(YES/NO)')==NO:
+        count = len(items)
+        if messagebox.askyesno('确认执行','执行数据数量: '+str(count)+' 条;此操作不可逆，是否继续(YES/NO)?')==NO:
             return
 
         i_suss=0
