@@ -607,7 +607,7 @@ class import_pane(Frame):
                 mr_line[col_header[7]]= r.comments
                 mr_line[col_header[8]]= r.rp
                 mr_line[col_header[9]]= r.box_code_sj
-                if len(r.app_person)==0 or r.app_person=='\'\'':
+                if r.app_person is None or len(r.app_person)==0 or r.app_person=='\'\'':
                     mr_line[col_header[10]]=r.mat_app_person
                 else:
                     mr_line[col_header[10]]=r.app_person
@@ -676,17 +676,6 @@ class refresh_thread(threading.Thread):
         threadLock.acquire()
         self.pane.refresh()
         threadLock.release()  
-        
-threadLock1 = threading.Lock()
-class export_thread(threading.Thread):
-    def __init__(self, pane):
-        threading.Thread.__init__(self)
-        self.pane=pane
-
-    def run(self):
-        threadLock1.acquire()
-        self.pane.export()
-        threadLock1.release()  
 
 display_col=['col0','col1','col2','col3','col4','col5','col6','col7','col8','col9','col10','col11','col21','col22','col23','col24','col25','col26']
 cols = ['col0','col1','col2','col3','col4','col5','col6','col7','col8','col9','col10','col11','col12','col13','col14','col15','col16','col17','col18','col19','col20','col21','col22','col23','col24','col25','col26']
@@ -852,9 +841,9 @@ class mat_fin_pane(Frame):
         self.mat_list.bind('<Control-C>', self.copy_list) 
         
         self.focus_force()
-        self.bind('<Control-a>', self.select_all)
-        self.bind('<Control-A>', self.select_all)
-        self.bind('<Escape>', self.clear_select)
+        #self.bind('<Control-a>', self.select_all)
+        #self.bind('<Control-A>', self.select_all)
+        self.mat_list.bind('<Escape>', self.clear_select)
         self.mat_list.bind('<Control-a>', self.select_all)
         self.mat_list.bind('<Control-A>', self.select_all)
 
@@ -1513,7 +1502,11 @@ class proj_release_pane(Frame):
         self.release_button.grid(row=0, column=2, sticky=NSEW)
         self.release_button['command']= self.release_prj
         if login_info['perm'][2]!='2' and login_info['perm'][2]!='9':
-            self.release_button.grid_forget()  
+            self.release_button.grid_forget() 
+            
+        self.export_button=Button(self, text='导出清单')
+        self.export_button.grid(row=0, column=3, sticky=NSEW)
+        self.export_button['command']=self.proj_export
         
         self.delivery_button=Button(self, text='发运完成')
         self.delivery_button.grid(row=1, column=3, sticky=NSEW)
@@ -1573,8 +1566,170 @@ class proj_release_pane(Frame):
         
         self.wbs_list.bind("<Button-3>", self.do_popup)
         
+        #self.bind('<Control-a>', self.select_all)
+        #self.bind('<Control-A>', self.select_all)
+        self.wbs_list.bind('<Escape>', self.clear_select)
+        self.wbs_list.bind('<Control-a>', self.select_all)
+        self.wbs_list.bind('<Control-A>', self.select_all)
+        
         if login_info['status'] and int(login_info['perm'][2])>=1:
             self.__loop_refresh()
+            
+    def select_all(self, event):
+        items = self.wbs_list.get_children()
+        if not items:
+            return
+
+        self.wbs_list.selection_set(items[0])   
+        self.wbs_list.focus_set()
+        self.wbs_list.focus(items[0])
+        for item in items:
+            self.wbs_list.selection_add(item)
+    
+    def clear_select(self, event):
+        items=self.wbs_list.selection()
+        for item in items:
+            self.wbs_list.selection_remove(item)
+            
+    def proj_export(self):
+        items = self.wbs_list.selection()
+        if not items:        
+            return
+ 
+        file_str=filedialog.asksaveasfilename(title="导出文件", filetypes=[('excel file','.xlsx')])
+        if not file_str:
+            return
+
+        if not file_str.endswith(".xlsx"):
+            file_str+=".xlsx"
+
+        wb=Workbook()
+        ws0=wb.worksheets[0]
+        
+        ws0.title='项目清单'
+        col_size = len(project_head)
+        for i in range(col_size):
+            ws0.cell(row=1,column=i+1).value=project_head[i]
+        
+        rid=0
+        wbses=[]
+        for item in items:
+            value = self.wbs_list.item(item, 'values')
+            wbses.append(value[1])
+            cid=0
+            for c_str in value:
+                ws0.cell(row=rid+2,column=cid+1).value=value[cid]
+                cid+=1
+            rid+=1
+        
+        col_header=['导入日期','非标编号','判断','物料号','物料名称(中)','物料名称(英)','图号','单位','备注','RP','BoxId','申请人','自制完成','负责人','完成日期','价格维护','负责人','完成日期','CO-run','负责人','完成日期']
+        ws1=wb.create_sheet()        
+        ws1.title='PSM负责'
+        col_size=len(col_header)
+        
+        for col in range(col_size):
+            ws1.cell(row=1, column=col+1).value = col_header[col]
+        
+        mat_items= nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_app_link).switch(nstd_app_head).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).\
+                        where((nstd_app_link.wbs_no.in_(wbses))&((nstd_mat_fin.justify==1)|(nstd_mat_fin.justify==2)|(nstd_mat_fin.justify==6))&(nstd_mat_fin.pu_price_fin==False)&(nstd_mat_fin.co_run_fin==False)).naive()
+
+        self.create_excel_sheet(ws1, mat_items)
+        
+        ws2= wb.create_sheet()
+        ws2.title='钣金自制'
+        for col in range(col_size):
+            ws2.cell(row=1, column=col+1).value = col_header[col]
+        
+        mat_items= nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_app_link).switch(nstd_app_head).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).\
+                        where((nstd_app_link.wbs_no.in_(wbses))&(nstd_mat_fin.justify==4)&(nstd_mat_fin.mbom_fin==False)&(nstd_mat_fin.co_run_fin==False)).naive()
+
+        self.create_excel_sheet(ws2, mat_items)
+        
+        ws3 =wb.create_sheet()
+        ws3.title = '电气自制'
+        for col in range(col_size):
+            ws3.cell(row=1, column=col+1).value = col_header[col]
+        
+        mat_items= nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_app_link).switch(nstd_app_head).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).\
+                        where((nstd_app_link.wbs_no.in_(wbses))&(nstd_mat_fin.justify==3)&(nstd_mat_fin.mbom_fin==False)&(nstd_mat_fin.co_run_fin==False)).naive()
+
+        self.create_excel_sheet(ws3, mat_items)      
+
+        ws4 = wb.create_sheet()
+        ws4.title = '曳引机自制'
+        for col in range(col_size):
+            ws4.cell(row=1, column=col+1).value = col_header[col]
+        
+        mat_items= nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_app_link).switch(nstd_app_head).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).\
+                        where((nstd_app_link.wbs_no.in_(wbses))&(nstd_mat_fin.justify==5)&(nstd_mat_fin.mbom_fin==False)&(nstd_mat_fin.co_run_fin==False)).naive()
+
+        self.create_excel_sheet(ws4, mat_items) 
+        
+        ws5 =wb.create_sheet()
+        ws5.title = 'CO 负责'
+        for col in range(col_size):
+            ws5.cell(row=1, column=col+1).value = col_header[col]
+        
+        mat_items= nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_app_link).switch(nstd_app_head).join(nstd_mat_table).switch(nstd_mat_table).join(nstd_mat_fin).\
+                        where((nstd_app_link.wbs_no.in_(wbses))&(nstd_mat_fin.justify>0)&(nstd_mat_fin.co_run_fin==False)).naive()
+        
+        self.create_excel_sheet(ws5, mat_items) 
+        
+        if excel_xlsx.save_workbook(workbook=wb, filename=file_str):
+            messagebox.showinfo("输出","成功输出!")  
+        
+            
+    def create_excel_sheet(self, ws,  mat_items):
+        rid=0
+        for r in mat_items:
+            ws.cell(row=rid+2, column=1).value=none2str(r.modify_on)
+            ws.cell(row=rid+2, column=2).value=r.nstd_app
+            ws.cell(row=rid+2, column=3).value=Justify_Types[r.justify]
+            ws.cell(row=rid+2, column=4).value= r.mat_no
+            ws.cell(row=rid+2, column=5).value = r.mat_name_cn
+            ws.cell(row=rid+2, column=6).value = r.mat_name_en
+            ws.cell(row=rid+2, column=7).value = none2str(r.drawing_no)
+            ws.cell(row=rid+2, column=8).value = r.mat_unit
+            ws.cell(row=rid+2, column=9).value = none2str(r.comments)
+            ws.cell(row=rid+2, column=10).value = none2str(r.rp)
+            ws.cell(row=rid+2, column=11).value = none2str(r.box_code_sj)
+            app_per = r.app_person
+            if app_per is None:
+                app_per =none2str(r.mat_app_person)
+            elif len(app_per)==0:
+                app_per =none2str(r.mat_app_person)
+                
+            ws.cell(row=rid+2, column=12).value = app_per
+            
+            temp = (r.mbom_fin and 'Y' or '')
+            ws.cell(row=rid+2, column=13).value = temp
+            if temp.upper()=='Y':
+                ws.cell(row=rid+2, column=14).value = get_name(r.mbom_fin_by)
+                ws.cell(row=rid+2, column=15).value = none2str(r.mbom_fin_on)
+            else:
+                ws.cell(row=rid+2, column=14).value =''
+                ws.cell(row=rid+2, column=15).value = ''
+                
+            temp=(r.pu_price_fin and 'Y' or '')
+            ws.cell(row=rid+2, column=16).value = temp
+            if temp.upper()=='Y':
+                ws.cell(row=rid+2, column=17).value = get_name(r.pu_price_fin_by)
+                ws.cell(row=rid+2, column=18).value = none2str(r.pu_price_fin_on)
+            else:
+                ws.cell(row=rid+2, column=17).value = ''
+                ws.cell(row=rid+2, column=18).value = ''
+                
+            temp = (r.co_run_fin and 'Y' or '')
+            ws.cell(row=rid+2, column=19).value = temp
+            if temp.upper()=='Y':
+                ws.cell(row=rid+2, column=20).value = get_name(r.co_run_fin_by)
+                ws.cell(row=rid+2, column=21).value = none2str(r.co_run_fin_on)
+            else:
+                ws.cell(row=rid+2, column=20).value = ''
+                ws.cell(row=rid+2, column=21).value = ''
+                
+            rid+=1
+            
     
     def wbs_search(self, event):
         wbs = self.wbs_pos.get()
@@ -2107,7 +2262,7 @@ class his_display(Toplevel):
         self.proc_list = ttk.Treeview(self, show='headings',columns=self.cols_his)
         for col in self.cols_his:
             i = self.cols_his.index(col)
-            self.proc_list.heading(col, text=self.tree_head_his[i])  
+            self.proc_list.heading(col, text=self.tree_head_his[i], command=lambda _col=col: treeview_sort_column(self.proc_list, _col, False))  
         
         self.proc_list.column('col0', width=80, anchor='w')
         self.proc_list.column('col1', width=100, anchor='w')

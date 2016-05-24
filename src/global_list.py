@@ -7,7 +7,7 @@
 """
 import tkinter
 from tkinter import *
-from tkinter.simpledialog import Dialog
+from tkinter import simpledialog
 from tkinter import font
 from tkinter import scrolledtext
 from tkinter import messagebox
@@ -41,7 +41,7 @@ login_info ={'uid':'','pwd':'','status':False,'perm':'0000'}
 6 - 曳引机自制
 '''  
 
-class date_picker(Dialog): 
+class date_picker(simpledialog.Dialog): 
     result=None
     def body(self, master):
         from_label=Label(master,text='from')
@@ -157,14 +157,14 @@ def center(toplevel):
     y = h/2 - size[1]/2
     toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))
     
-class ScrolledTextDlg(Dialog):
+class ScrolledTextDlg(simpledialog.Dialog):
     def __init__(self, title,parent=None,initialvalue=None):  
         if not parent:
             parent = tkinter._default_root
         
         self.initialvalue = initialvalue
         
-        Dialog.__init__(self, parent, title)
+        simpledialog.Dialog.__init__(self, parent, title)
         
     def body(self, master):
         list_title= Label( master, text='WBS list')
@@ -228,7 +228,7 @@ class ScrolledTextDlg(Dialog):
     
     def destroy(self):
         self.textfield=None
-        Dialog.destroy(self)        
+        simpledialog.Dialog.destroy(self)        
             
     def getresult(self):
         return self.textfield.get('1.0',END)
