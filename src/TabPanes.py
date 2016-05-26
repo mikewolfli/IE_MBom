@@ -1844,11 +1844,18 @@ class proj_release_pane(Frame):
             self.popup.grab_release() 
     
     def delivery(self):
+        sel_items = self.wbs_list.selection()
+        if not sel_items: 
+            d = ask_list('物料拷贝器', 1)
+            if not d:
+                return
+            self.make_delivery(d)            
+            return
+
         if self.sel_index !=1:
             messagebox.showwarning('提示', '请在选项中选择已经release的项目')
-            return
-        
-        sel_items = self.wbs_list.selection()
+            return       
+         
         error=[]
         for item in sel_items:
             i = project_cols.index('col2')
@@ -1867,6 +1874,28 @@ class proj_release_pane(Frame):
         
         messagebox.showinfo('delivery结果','delivery成功:'+str(i_count-i_fail)+';失败:'+str(i_fail))
         
+    def make_delivery(self, wbses):
+        error=[]
+        e_str=''
+        for wbs in wbses:
+            try:
+                UnitInfo.get((UnitInfo.wbs_no==wbs)&(UnitInfo.status==6))
+            except UnitInfo.DoesNotExist:
+                error.append(wbs)
+                e_str=e_str+'\n'+wbs+'状态未RELEASE'
+                continue
+           
+            q = UnitInfo.update(status=8, modify_emp=login_info['uid'], modify_date=datetime.datetime.now()).where(UnitInfo.wbs_no==wbs)
+            j= q.execute() 
+            if j==0:
+                error.append(wbs)
+                e_str=e_str+'\n'+wbs+'更新失败'
+        
+        i_count=len(wbses)
+        i_fail =len(error)
+                
+        messagebox.showinfo('delivery结果','delivery成功:'+str(i_count-i_fail)+';失败:'+str(i_fail)+':'+e_str)            
+                
     def release_prj(self):
         if self.sel_index !=0:
             messagebox.showwarning('提示', '请在选项中选择已经Close但未release的项目')

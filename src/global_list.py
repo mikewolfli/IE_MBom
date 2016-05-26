@@ -158,11 +158,12 @@ def center(toplevel):
     toplevel.geometry("%dx%d+%d+%d" % (size + (x, y)))
     
 class ScrolledTextDlg(simpledialog.Dialog):
-    def __init__(self, title,parent=None,initialvalue=None):  
+    def __init__(self, title, method=0, parent=None, initialvalue=None):  
         if not parent:
             parent = tkinter._default_root
         
         self.initialvalue = initialvalue
+        self.method=method
         
         simpledialog.Dialog.__init__(self, parent, title)
         
@@ -204,15 +205,20 @@ class ScrolledTextDlg(simpledialog.Dialog):
             if len(res.rstrip())==0:
                 continue
             
-            if len(res.rstrip())!=9:
+            if len(res.rstrip())!=9 and self.method==0:
                 messagebox.showwarning("Illegal value", '物料号字符串长度为9位')
-                return 0                
+                return 0 
                 
-            l = list(res)
-            for i in range(len(l) - 1, -1, -1):
-                if not(48 <= ord(l[i]) <= 57): 
-                    messagebox.showwarning("Illegal value", '请输入数值')
-                    return 0
+            if len(res.rstrip())!=14 and self.method==1:
+                messagebox.showwarning("Illegal value", 'WBS No字符串长度为14位')
+                return 0                 
+            
+            if self.method==0:
+                l = list(res)
+                for i in range(len(l) - 1, -1, -1):
+                    if not(48 <= ord(l[i]) <= 57): 
+                        messagebox.showwarning("Illegal value", '请输入数值')
+                        return 0
                     
             count+=1                
             res_res.append(res.rstrip())
@@ -238,8 +244,8 @@ class ScrolledTextDlg(simpledialog.Dialog):
         self.textfield.clipboard_get()
     
 
-def ask_list(title):
-    d=ScrolledTextDlg(title)
+def ask_list(title, method=0):
+    d=ScrolledTextDlg(title, method)
     return d.result
 
 def value2key(dic, value):
