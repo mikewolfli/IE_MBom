@@ -214,7 +214,7 @@ class ScrolledTextDlg(simpledialog.Dialog):
                 return 0                 
             
             if self.method==0:
-                l = list(res)
+                l = list(res.rstrip())
                 for i in range(len(l) - 1, -1, -1):
                     if not(48 <= ord(l[i]) <= 57): 
                         messagebox.showwarning("Illegal value", '请输入数值')

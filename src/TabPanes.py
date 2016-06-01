@@ -1351,13 +1351,14 @@ class mat_fin_pane(Frame):
 
     def copy_clip_process(self):
         wbs_sel = WBSSelDialog(self, 'WBS List粘贴')
-
+            
     def __mat_list(self,choice, mats, comment=None):
         s_error=''
         i_error=0
         i_suss=0
         for mat in mats:
-            if self.process_mat_status(mat.rstrip(), choice, True)>0:
+            result = self.process_mat_status(mat.rstrip(), choice, True)
+            if result >0:
                 i_suss=i_suss+1
             else:
                 i_error=i_error+1
@@ -1414,7 +1415,7 @@ class mat_fin_pane(Frame):
         """
         try:
             query_res= nstd_mat_fin.get(nstd_mat_fin.mat_no==mat)
-        except nstd_mat_table.DoesNotExist:
+        except nstd_mat_fin.DoesNotExist:
             return -1
 
         mat_catalog= query_res.justify
@@ -1448,8 +1449,11 @@ class mat_fin_pane(Frame):
         elif method==3:
             if user_per!=5 and user_per!=9:
                 return -2
+            
+            if mat_catalog<=0:
+                return -3
 
-            if (mat_catalog==1 or mat_catalog==2) and not mat_pu_price_fin:
+            if (mat_catalog==1 or mat_catalog==2 or mat_catalog==6) and not mat_pu_price_fin:
                 return -3
 
             if (mat_catalog==3 or mat_catalog==4 or mat_catalog==5) and not mat_mbom_fin:
