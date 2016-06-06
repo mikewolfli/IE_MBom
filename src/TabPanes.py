@@ -298,9 +298,10 @@ class import_pane(Frame):
 
         if not nstd_id.endswith('-WL'):
             i_pos = nstd_id.find('WL')
-            nstd_id=nstd_id[:i_pos+1]
-
+            nstd_id=nstd_id[:i_pos+2]
+        
         self.nstd_app_id.append(nstd_id)
+        print(nstd_id)
         try:
             nstd_result = NonstdAppItem.select(NonstdAppItem.link_list, NonstdAppItemInstance.index_mat, NonstdAppItemInstance.res_engineer, NonstdAppItemInstance.create_emp).join(NonstdAppItemInstance, on=(NonstdAppItem.index == NonstdAppItemInstance.index))\
                 .where((NonstdAppItemInstance.nstd_mat_app==nstd_id)&(NonstdAppItem.status>=0)&(NonstdAppItemInstance.status>=0)).naive().get()

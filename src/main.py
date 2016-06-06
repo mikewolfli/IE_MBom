@@ -232,7 +232,6 @@ class mainframe(Frame):
                 if not self.import_tab and int(s_perm[i_index])>0:
                     self.import_tab = import_pane(self) 
                     self.ntbook.add(self.import_tab, text=nt_title, sticky=NSEW)
-                    print(i_index)
                     self.tree.set(sel, 'col0', i_sel)
                     self.ntbook.select(i_sel)
                 else:
