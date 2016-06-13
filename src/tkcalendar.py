@@ -1,7 +1,10 @@
-#!/usr/bin/env python3
-#Author : Camilo Olarte|colarte@telesat.com.co|Sept.2003
-#Modifier: Felix Lu | lugh82@gmail.com | Oct.2011
-
+#!/usr/bin/env python
+#coding:utf-8
+"""
+  Author:   10256603<mikewolf.li@tkeap.com>
+  Purpose: 
+  Created: 2016/4/7
+"""
 import calendar
 import tkinter as tk
 import time
@@ -206,7 +209,7 @@ class tkCalendar:
 
 #  END CLASS
 ##############################################
-
+'''
 class clsMainFrame(tk.Frame):
 
     def __init__(self, master):
@@ -231,3 +234,4 @@ if __name__ == '__main__':
     clsMainFrame(Frm)
     Frm.pack()
     root.mainloop()
+'''

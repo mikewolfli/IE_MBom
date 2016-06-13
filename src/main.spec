@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['main.py','global_list.py','mbom_dataset.py','TabPanes.py'],
-             pathex=['D:\\develop\\workspace\\IE_MBom\\src'],
+a = Analysis(['main.py','global_list.py','mbom_dataset.py','TabPanes.py','tkcalendar.py'],
+             pathex=['D:/develop/workspace/IE_MBom/src'],
              binaries=None,
              datas=None,
              hiddenimports=[],
@@ -19,15 +19,17 @@ pyz = PYZ(a.pure, a.zipped_data,
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
-          name='matop',
+          name='main',
           debug=False,
           strip=False,
           upx=True,
-          console=False,icon='ieico.ico' )
+          console=False,
+		  icon='ieico.ico'
+		  )
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
                a.datas,
                strip=False,
                upx=True,
-               name='matop')
+               name='main')

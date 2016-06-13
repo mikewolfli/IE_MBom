@@ -5,7 +5,6 @@
   Purpose: 
   Created: 2016/3/23
 """
-import tkinter
 from tkinter import *
 from tkinter import simpledialog
 from tkinter import font
@@ -21,7 +20,6 @@ import openpyxl.writer.excel as excel_xlsx
 import pandas as pd
 from pandastable import Table, TableModel
 import threading
-import time
 import functools
 import ctypes
 from tkcalendar import *
@@ -160,7 +158,7 @@ def center(toplevel):
 class ScrolledTextDlg(simpledialog.Dialog):
     def __init__(self, title, method=0, parent=None, initialvalue=None):  
         if not parent:
-            parent = tkinter._default_root
+            parent = tk._default_root
         
         self.initialvalue = initialvalue
         self.method=method

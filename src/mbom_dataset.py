@@ -7,7 +7,6 @@
 """
 
 from peewee import *
-import datetime
 
 #单位对照表
 Unit_Types=(

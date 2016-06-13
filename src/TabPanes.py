@@ -163,6 +163,9 @@ class import_pane(Frame):
             mr_line[col_header[10]]=s_str
             r_str = ws1.cell(row=rx+4, column=4).value
             s_str = self.conver_excel_data(r_str)
+            if not s_str.startswith('E/'):
+                s_str=s_str.replace('E','E/')
+                
             mr_line['wbs']=s_str
             r_str = ws1.cell(row=rx+4, column=22).value
             s_str = self.conver_excel_data(r_str)  
@@ -1438,7 +1441,7 @@ class mat_fin_pane(Frame):
             else:
                 return -2
         elif method==2:
-            if (mat_catalog==1 or mat_catalog==2) and (user_per==4 or user_per==9):
+            if (mat_catalog==1 or mat_catalog==2 or mat_catalog==6) and (user_per==4 or user_per==9):
                 if mat_pu_price_fin ==value:
                     return 2
                 else:
