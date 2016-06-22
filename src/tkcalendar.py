@@ -44,7 +44,7 @@ else:
 ##############################################
 #  BEGIN CLASS
 
-class tkCalendar:
+class tkCalendar(object):
 
     def __init__(self, master, arg_year, arg_month, arg_day,
         arg_parent_updatable_var):

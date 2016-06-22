@@ -764,13 +764,13 @@ class mat_fin_pane(Frame):
         self.export_button=Button(self, text='导出EXCEL')
         self.export_button.grid(row=0, column=6,  sticky=EW)
         self.export_button['command']=self.__export_excel
-        '''
-        self.export_direct=Button(self, text='直接导出已完成清单')
+        
+        self.export_direct=Button(self, text='直接导出已完成清单\n(按CO run完成日期筛选)')
         self.export_direct.grid(row=0,column=7, sticky=EW)
         self.export_direct['command']=self.direct_export
         if login_info['perm'][1]!='1' and login_info['perm'][1]!='9':
             self.export_direct.grid_forget()        
-        '''       
+              
         self.export_finished=Button(self, text='已完成清单\n(按CO run完成日期筛选)')
         self.export_finished.grid(row=1,column=7, sticky=EW)
         self.export_finished['command']=self.get_finished 
@@ -944,8 +944,56 @@ class mat_fin_pane(Frame):
             messagebox.showinfo("输出","成功输出!")  
 
     def direct_export(self):
-        pass
-    
+        date_ctrl = date_picker(self)
+        self.sel_range = date_ctrl.result
+        if not self.sel_range:
+            return
+                   
+        file_str=filedialog.asksaveasfilename(title="导出文件", filetypes=[('excel file','.xlsx')])
+        if not file_str:
+            return
+
+        if not file_str.endswith(".xlsx"):
+            file_str+=".xlsx"
+            
+        self.b_finished=True
+        self.refresh_mat()  
+
+        wb=Workbook()
+        ws=wb.worksheets[0]
+        ws.title='物料清单'
+        col_size = len(cols)
+        for i in range(col_size):
+            ws.cell(row=1,column=i+1).value=tree_head[i]  
+        ws.cell(row=1, column=col_size+1).value = '关联WBS'
+        ws.cell(row=1, column=col_size+2).value = '合同号'
+        ws.cell(row=1, column=col_size+3).value = '项目名称'
+        n=0 
+        
+        dic_str = {}
+        
+        for key in range(len(self.mat_res)):
+            for i in range(col_size):
+                ws.cell(row=n+2, column=i+1).value = self.mat_res[key][i]
+
+            j=cols.index('col1')
+            nstd_id = self.mat_res[key][j]
+            
+            if nstd_id not in dic_str:
+                s_str = self.combine_wbs(self.nstd_res[nstd_id])
+                dic_str[nstd_id]=s_str
+                
+            ws.cell(row=n+2, column=col_size+1).value = dic_str[nstd_id]
+            if dic_str[nstd_id].startswith('E/'):
+                wbs = self.nstd_res[nstd_id][0]
+                prj_info = self.wbs_res[wbs]               
+                ws.cell(row=n+2, column=col_size+2).value = prj_info[1]
+                ws.cell(row=n+2, column=col_size+3).value = prj_info[2]
+            n+=1
+
+        if excel_xlsx.save_workbook(workbook=wb, filename=file_str):
+            messagebox.showinfo("输出","成功输出!") 
+                 
     def get_finished(self):
         if self.data_thread.is_alive():
             messagebox.showinfo('提示','表单刷新线程正在后台刷新列表，请等待完成后再点击!')
@@ -1521,6 +1569,18 @@ class proj_release_pane(Frame):
         if login_info['perm'][2]!='3' and login_info['perm'][2]!='9':
             self.delivery_button.grid_forget()  
             
+        self.restore_prj=Button(self, text='恢复项目到待排产状态')
+        self.restore_prj.grid(row=0, column=4, sticky=NSEW)
+        self.restore_prj['command']=self.restore_prj_proc
+        if login_info['perm'][2]!='3' and login_info['perm'][2]!='9':
+            self.restore_prj.grid_forget()
+            
+        self.update_date_button = Button(self, text='更新非标交货期和配置完成日期')
+        self.update_date_button.grid(row=1, column=4, sticky=NSEW)
+        self.update_date_button['command']=self.update_date
+        if login_info['perm'][2]!='3' and login_info['perm'][2]!='9':
+            self.update_date_button.grid_forget()
+            
         info_label = Label(filter_body, text='红色背景-暂停项目;绿色背景-加急项目;\n黄色背景-精益项目;天蓝色:pre-engineer项目')
         info_label.grid(row=0, column=4, columnspan=3, sticky=NSEW)
         self.count_str = StringVar()
@@ -1841,7 +1901,26 @@ class proj_release_pane(Frame):
             wbses.append(wbs)
             
         his_display(self,'非标物料', wbses, 5)
+    
+    def update_date(self):
+        d = ask_list('物料拷贝器', 1)
+        if not d:
+            return
         
+        for item in d:
+            self.update_delivery_date(item)
+            
+    def update_delivery_date(self, wbs):
+        try:
+            r = UnitInfo.get(UnitInfo.wbs_no==wbs)
+        except UnitInfo.DoesNotExist:   
+            return
+        
+        configure_date = r.req_configure_finish
+        
+        q_res=  NonstdAppHeader.update(drawing_req_date=configure_date).where((NonstdAppHeader.link_list.contains(wbs))&(NonstdAppHeader.status>=0))
+        q_res.execute()
+            
     def do_popup(self, event):
         # display the popup menu
         try:
@@ -1849,7 +1928,50 @@ class proj_release_pane(Frame):
         finally:
             # make sure to release the grab (Tk 8.0a1 only)
             self.popup.grab_release() 
+            
+    def restore_prj_proc(self):
+        d = ask_list('物料拷贝器', 1)
+        if not d:
+            return
+        
+        for item in d:
+            self.restore_unit(item)
     
+    def restore_unit(self,wbs):
+        q_res = NonstdAppItem.select(NonstdAppItem.index,NonstdAppItem.nonstd,NonstdAppItemInstance.index_mat,NonstdAppItemInstance.has_nonstd_draw,NonstdAppItemInstance.has_nonstd_mat).join(NonstdAppItemInstance, JOIN.LEFT_OUTER, on=(NonstdAppItem.index==NonstdAppItemInstance.index)).\
+                   where(NonstdAppItem.link_list.contains(wbs)).naive()
+        
+        if not q_res:
+            pass
+        else:
+            for r in q_res:
+                if r.has_nonstd_draw:
+                    q=LProcAct.delete().where((LProcAct.instance==r.index_mat)&(LProcAct.workflow=='WF0004'))
+                    q.execute()
+                
+                if r.has_nonstd_mat:
+                    q=LProcAct.delete().where((LProcAct.instance==r.index_mat)&(LProcAct.workflow=='WF0005'))
+                    q.execute()
+                    
+                q=LProcAct.delete().where((LProcAct.instance==r.index)&(LProcAct.workflow=='WF0003'))
+                q.execute()
+                                   
+                q = NonstdAppItemInstance.update(status=-1).where(NonstdAppItemInstance.index_mat==r.index_mat)
+                q.execute()
+                
+                q= NonstdAppItem.update(status=-1).where(NonstdAppItem.index==r.index)
+                q.execute()
+                
+                q= NonstdAppHeader.update(status=-1).where(NonstdAppHeader.nonstd==r.nonstd)
+                q.execute()
+                
+                
+        q=LProcAct.update(is_active=False).where((LProcAct.instance==wbs)&(LProcAct.is_active==True)&((LProcAct.workflow=='WF0002')|(LProcAct.workflow=='WF0006')))
+        q.execute()
+        
+        q = UnitInfo.update(status=2).where(UnitInfo.wbs_no==wbs)  
+        q.execute()     
+                       
     def delivery(self):
         sel_items = self.wbs_list.selection()
         if not sel_items: 

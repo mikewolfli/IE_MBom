@@ -5,6 +5,7 @@
   Purpose: 
   Created: 2016/3/23
 """
+import tkinter as tk
 from tkinter import *
 from tkinter import simpledialog
 from tkinter import font
@@ -23,7 +24,6 @@ import threading
 import functools
 import ctypes
 from tkcalendar import *
-
 
 login_info ={'uid':'','pwd':'','status':False,'perm':'0000'}
 '''
