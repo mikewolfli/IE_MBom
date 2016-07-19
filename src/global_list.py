@@ -26,6 +26,10 @@ import ctypes
 from tkcalendar import *
 
 login_info ={'uid':'','pwd':'','status':False,'perm':'0000'}
+
+NAME = '非标物料处理 '
+PUBLISH_KEY=' R ' #R - release , B - Beta , A- Alpha
+VERSION = '1.0.0'
 '''
 界面权限：
 0 - 无权限

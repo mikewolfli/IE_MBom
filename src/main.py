@@ -304,7 +304,7 @@ if __name__ == '__main__':
     root=Tk() 
     #root.resizable(0, 0)
     root.wm_state('zoomed')
-    root.title('非标物料处理')
+    root.title(NAME+PUBLISH_KEY+VERSION)
     default_font = font.nametofont("TkDefaultFont")
     default_font.configure(size=10)  
     root.option_add("*Font", default_font)

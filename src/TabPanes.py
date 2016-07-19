@@ -163,8 +163,12 @@ class import_pane(Frame):
             mr_line[col_header[10]]=s_str
             r_str = ws1.cell(row=rx+4, column=4).value
             s_str = self.conver_excel_data(r_str)
-            if not s_str.startswith('E/'):
+            
+            if len(s_str)==0:
+                pass
+            elif not s_str.startswith('E/'):
                 s_str=s_str.replace('E','E/')
+            
                 
             mr_line['wbs']=s_str
             r_str = ws1.cell(row=rx+4, column=22).value
@@ -178,7 +182,7 @@ class import_pane(Frame):
             
         self.scan_list()
         for item in self.cs_set:
-            self.import_cs(item)      
+            self.import_cs(item) 
         
     def import_cs(self, item):
         try: 
@@ -915,6 +919,7 @@ class mat_fin_pane(Frame):
         ws.cell(row=1, column=col_size+1).value = '关联WBS'
         ws.cell(row=1, column=col_size+2).value = '合同号'
         ws.cell(row=1, column=col_size+3).value = '项目名称'
+        ws.cell(row=1, column=col_size+4).value = '关联梯台数'
         n=0 
         
         dic_str = {}
@@ -938,6 +943,8 @@ class mat_fin_pane(Frame):
                 prj_info = self.wbs_res[wbs]               
                 ws.cell(row=n+2, column=col_size+2).value = prj_info[1]
                 ws.cell(row=n+2, column=col_size+3).value = prj_info[2]
+                
+            ws.cell(row=n+2, column=col_size+4).value = len(self.nstd_res[nstd_id])
             n+=1
 
         if excel_xlsx.save_workbook(workbook=wb, filename=file_str):
