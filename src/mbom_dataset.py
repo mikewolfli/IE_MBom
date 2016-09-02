@@ -21,6 +21,7 @@ Unit_Types=(
 )
 
 Justify_Types={
+    -1:'未激活',
     0: '未分类',
     1: 'CLU外购',
     2: 'PCU外购',
@@ -114,6 +115,21 @@ class operate_point(BaseModel):
     employee = ForeignKeyField(s_employee)
     operate_point=CharField(null=True, max_length=64)
     latest_on = DateTimeField(null=True,formats='%Y-%m-%d %H:%M:%S')
+    
+    class Meta:
+        db_table='operate_point'
+        
+class s_change_log(BaseModel):
+    table_name = CharField(max_length=64, null=False)
+    change_section = CharField(max_length=64, null=False)
+    key_word = CharField(max_length=64,null=False)
+    old_value = TextField(null=False)
+    new_value = TextField(null=False)
+    log_on = DateTimeField(null=True)
+    log_by = CharField(null=True, max_length=64)
+    
+    class Meta:
+        db_table = 's_change_log'
         
 class nstd_app_head(BaseModel):
     nstd_app = CharField(primary_key=True, db_column='nstd_app_id', max_length=16)

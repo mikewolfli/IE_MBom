@@ -24,12 +24,13 @@ import threading
 import functools
 import ctypes
 from tkcalendar import *
+import os,sys
 
 login_info ={'uid':'','pwd':'','status':False,'perm':'0000'}
 
 NAME = '非标物料处理 '
 PUBLISH_KEY=' R ' #R - release , B - Beta , A- Alpha
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 '''
 界面权限：
 0 - 无权限
@@ -41,7 +42,17 @@ VERSION = '1.0.0'
 4 - PSM
 5 - CO Run
 6 - 曳引机自制
-'''  
+''' 
+
+def cur_dir():
+    #获取脚本路径
+    path = sys.path[0]
+    #判断为脚本文件还是py2exe编译后的文件，如果是脚本文件，则返回的是脚本的目录，
+    #如果是py2exe编译后的文件，则返回的是编译后的文件路径
+    if os.path.isdir(path):
+        return path
+    elif os.path.isfile(path):
+        return os.path.dirname(path) 
 
 class date_picker(simpledialog.Dialog): 
     result=None

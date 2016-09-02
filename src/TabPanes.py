@@ -6,6 +6,7 @@
   Created: 2016/4/7
 """
 from global_list import *
+from mbom_dataset import UnitInfo, ProjectInfo
 global login_info
 
 header_line1 = ['TDM_ID','CN_DRAWING_NUMBER','CN_OLD_DRAWING_NUMBER','CN_PART_NAME_CHINESE','TDM_DESCRIPTION',
@@ -17,6 +18,11 @@ header_line2 = ['ID--Part','Drawing Number--Part','Old Drawing Number--Part','Pa
 
 col_header = ['非标物料申请编号','判断','物料号','物料名称(中)','物料名称(英)','图号','单位','备注','RP','BoxId','申请人','旧物料号']
 mat_db_header =['nstd_app','mat_no','mat_name_cn','mat_name_en','drawing_no','mat_unit','comments','rp','box_code_sj','justify','app_person','old_mat_no']
+
+def change_log(table,section,key, old,new):
+    q = s_change_log.insert(table_name=table,change_section=section,key_word=str(key),old_value=str(old),new_value=str(new),log_on=datetime.datetime.now(), log_by=login_info['uid'] )
+    q.execute()
+        
 class import_pane(Frame):
     '''
     权限
@@ -38,9 +44,15 @@ class import_pane(Frame):
         self.im_cs_button = Button(self.widgets_group1, text='导入CS数据')
         self.im_cs_button.pack(side='left')
         self.im_cs_button['command']=self.import_data
+        self.eds_active_button = Button(self.widgets_group1, text='激活EDS非标申请')
+        self.eds_active_button.pack(side='left')
+        self.eds_active_button['command']= self.eds_active
         self.out_button = Button(self.widgets_group1, text='导出PDM导入表')
         self.out_button.pack(side='left')
         self.out_button['command']=self.out_pdm_excel
+        self.out_active_button = Button(self.widgets_group1, text='导出物料申请表')
+        self.out_active_button.pack(side='left')
+        self.out_active_button['command'] = self.out_active_excel
         self.del_button = Button(self.widgets_group1, text='删除物料(by申请号)')
         self.del_button.pack(side='left')
         self.del_button['command']=self.del_mats
@@ -92,7 +104,169 @@ class import_pane(Frame):
         table_panel.grid(row=1, column=0, rowspan=2, columnspan=8, sticky=NSEW )
         self.grid(row=0, column=0, sticky=NSEW)
         self.columnconfigure(7, weight=1)
-        self.rowconfigure(2, weight=1)         
+        self.rowconfigure(2, weight=1)  
+    
+    def eds_active(self):
+        nstd_id = simpledialog.askstring('非标申请编号','请输入完整非标申请编号(不区分大小写):')
+        if not nstd_id:
+            return
+        
+        nstd_id = nstd_id.upper().strip()
+        
+        if len(nstd_id)==0:
+            return
+        
+        res = nstd_app_head.select(nstd_mat_table.mat_no).join(nstd_mat_table).where(nstd_app_head.nstd_app==nstd_id).naive()
+        
+        if not res:
+            messagebox.showwarning('警告','数据库中无与非标申请号相关的物料。')
+            return
+        
+        mats=[]
+        for r in res:
+            mat = none2str(r.mat_no)
+            mats.append(mat) 
+            
+            try:
+                rs=nstd_mat_fin.get(nstd_mat_fin.mat_no==mat)
+                if rs.justify==-1:
+                    change_log('nstd_mat_fin', 'justify', mat, '-1', '0')                          
+            except nstd_mat_fin.DoesNotExist:
+                continue
+            
+        q = nstd_mat_fin.update(justify=0).where(nstd_mat_fin.mat_no << mats and nstd_mat_fin.justify==-1)
+        
+        i = q.execute()
+        
+        messagebox.showinfo('更新完成', '共计'+str(i)+'个物料激活!')
+    
+    def out_active_excel(self):  
+        if self.mr_rows ==0:
+            messagebox.showwarning('提示', '请先输入非标申请号，得到物料清单号再点击输出.')
+            return
+        
+        file_str=filedialog.asksaveasfilename(title="导出文件", initialfile="temp",filetypes=[('excel file','.xlsx')])
+        if not file_str:
+            return
+
+        if not file_str.endswith(".xlsx"):
+            file_str+=".xlsx"
+
+        temp_file = os.path.join(cur_dir(),'template.xlsx')
+        wb = load_workbook(temp_file)
+        ws = wb.active
+        nstd =''
+
+        for i in range(1, self.mr_rows+1):
+            ws.cell(row=i+3, column=1).value = date2str(datetime.datetime.today())
+            ws.cell(row=i+3, column=7).value = self.mat_dic[i][col_header[2]]
+            ws.cell(row=i+3, column=9).value = self.mat_dic[i][col_header[10]]
+            ws.cell(row=i+3, column=10).value = self.mat_dic[i][col_header[3]]
+            ws.cell(row=i+3, column=14).value = self.mat_dic[i][col_header[5]]
+            if len(self.mat_dic[i][col_header[5]])!=0 and self.mat_dic[i][col_header[5]].lower()!='no':
+                ws.cell(row=i+3, column=13).value='是'
+            ws.cell(row=i+3, column=15).value = self.mat_dic[i][col_header[9]]
+            ws.cell(row=i+3, column=17).value = self.mat_dic[i][col_header[8]]
+            ws.cell(row=i+3, column=18).value = self.mat_dic[i][col_header[4]]
+            
+            if nstd != self.mat_dic[i][col_header[0]] or  len(nstd)==0:             
+                nstd=self.mat_dic[i][col_header[0]]              
+                    
+            self.fill_others(ws,i+3, nstd)   
+                
+            ws.cell(row=i+3, column=23).value = nstd
+            
+        if excel_xlsx.save_workbook(workbook=wb, filename=file_str):
+            messagebox.showinfo("输出","成功输出!")
+            
+    def fill_others(self,ws, row, nstd): 
+        res= nstd_app_head.select(nstd_app_link.wbs_no).join(nstd_app_link).where(nstd_app_head.nstd_app==nstd).naive()
+        
+        wbses =[]
+        for r in res:
+            wbs = r.wbs_no
+            wbses.append(wbs)
+            
+        if len(wbses)==0:
+            return
+            
+        r =  ProjectInfo.select(ProjectInfo.project_name,UnitInfo.wbs_no, ElevatorTypeDefine.elevator_type).join(UnitInfo,on=(ProjectInfo.project==UnitInfo.project)).switch(UnitInfo)\
+                .join(ElevatorTypeDefine).where(UnitInfo.wbs_no==wbses[0]).naive().get()
+        ws.cell(row=row,column=5).value = r.project_name
+        ws.cell(row=row, column=4).value = self.combine_wbs(wbses)
+        ws.cell(row=row, column=6).value = r.elevator_type
+        
+    def combine_wbs(self, li):
+        li.sort()
+        if len(li)>1:
+            head = li[0]
+        elif li is None:
+            return ''
+        elif len(li)==0:
+            return ''
+        else:
+            return li[0]
+        
+        start = int(li[0][11:])
+        j=1
+        end = ''
+        for i in range(1, len(li)):
+            if int(li[i][11:]) == start+j:
+                j+=1   
+            else:
+                if j>1:
+                    head=head+'~'+end
+                elif len(end)>0:
+                    head = head+','+end
+                
+                if j>1:
+                    head=head+','+li[i][11:]
+                start=int(li[i][11:])
+
+                j=1 
+            end = li[i][11:]
+            
+        if j>1:
+            head=head+'~'+end 
+        else:
+            head = head+','+end
+        
+        return head        
+
+    def out_pdm_excel(self):
+        if self.mr_rows ==0:
+            messagebox.showwarning('提示', '请先输入非标申请号，得到物料清单号再点击输出.')
+            return
+        
+        file_str=filedialog.asksaveasfilename(title="导出文件", initialfile="temp",filetypes=[('excel file','.xlsx')])
+        if not file_str:
+            return
+
+        if not file_str.endswith(".xlsx"):
+            file_str+=".xlsx"
+
+        wb=Workbook()
+        ws=wb.worksheets[0]
+        ws.title='物料导入表'
+        for i in range(0,len(header_line1)):
+            ws.cell(row=1,column=i+1).value=header_line1[i]  
+
+        for i in range(0,len(header_line2)):
+            ws.cell(row=2,column=i+1).value=header_line2[i]
+
+        for i in range(1, self.mr_rows+1):
+            ws.cell(row=i+2, column=1).value = self.mat_dic[i][col_header[2]]
+            ws.cell(row=i+2, column=2).value = self.mat_dic[i][col_header[5]]
+            ws.cell(row=i+2, column=4).value = self.mat_dic[i][col_header[3]]
+            ws.cell(row=i+2, column=5).value = self.mat_dic[i][col_header[4]]
+            ws.cell(row=i+2, column=10).value = self.mat_dic[i][col_header[6]]
+            ws.cell(row=i+2, column=11).value = self.mat_dic[i][col_header[7]]
+            ws.cell(row=i+2, column=12).value = self.mat_dic[i][col_header[8]]
+            ws.cell(row=i+2, column=14).value = self.mat_dic[i][col_header[9]]
+            ws.cell(row=i+2, column=3).value = self.mat_dic[i][col_header[11]]
+            
+        if excel_xlsx.save_workbook(workbook=wb, filename=file_str):
+            messagebox.showinfo("输出","成功输出!")            
 
     def import_data(self):
         file_list = filedialog.askopenfilenames(title="导入文件", filetypes=[('excel file','.xlsx'),('excel file','.xlsm')])
@@ -103,12 +277,12 @@ class import_pane(Frame):
         self.mat_dic={}
         self.nstd_app_id = []
         for file in file_list:
-            self.read_excel_file(file)
+            self.read_excel_files(file)
         model = TableModel(dataframe=self.df.T)
         self.mat_table.updateModel(model)
         self.mat_table.redraw()
 
-    def read_excel_file(self, file):
+    def read_excel_files(self, file):
         wb = load_workbook(file, read_only=True, data_only=True)
         sheetnames=wb.get_sheet_names()
         
@@ -226,18 +400,12 @@ class import_pane(Frame):
         wbses=[]
         i=0
         for item in self.cs_set:            
-            if len(item['wbs'])==0:
-                if project == item['wbs']:
-                    item[col_header[0]]=nstd_id
-                else:
-                    if i!=0  and len(wbses)>0:
-                        self.nstd_dic[nstd_id]=wbses
-                        wbses=[]  
-                    i_nstd+=1
-                    nstd_id = 'NONCE'+str(i_nstd)+'-WL'
-                    item[col_header[0]]=nstd_id
-                    project = item['wbs'] 
-                    self.nstd_dic[nstd_id] = None
+            if len(item['wbs'])==0: 
+                i_nstd+=1
+                nstd_id = 'NONCE'+str(i_nstd)+'-WL'
+                item[col_header[0]]=nstd_id
+                project = item['wbs'] 
+                self.nstd_dic[nstd_id] = None
             else:
                 if project == item['wbs'][0:10]:
                     item[col_header[0]]=nstd_id
@@ -287,7 +455,7 @@ class import_pane(Frame):
     def get_nstd_id_for_noce(self):
         return  nstd_app_head.select().where(nstd_app_head.index_mat=='NONCE').count()    
                
-    def read_workbook(self, wb, sheetname):
+    def  read_workbook(self, wb, sheetname):
         ws1 = wb.get_sheet_by_name(sheetname)
         #ws2 =  wb.get_sheet_by_name(sheetnames[2])
 
@@ -432,39 +600,8 @@ class import_pane(Frame):
         del_qer = nstd_app_head.delete().where(nstd_app_head.nstd_app==nstd_id.upper())
         r = del_qer.execute()
 
-        if i>0:
+        if r>0:
             messagebox.showinfo('提示','删除成功')
-
-    def out_pdm_excel(self):
-        file_str=filedialog.asksaveasfilename(title="导出文件", initialfile="temp",filetypes=[('excel file','.xlsx')])
-        if not file_str:
-            return
-
-        if not file_str.endswith(".xlsx"):
-            file_str+=".xlsx"
-
-        wb=Workbook()
-        ws=wb.worksheets[0]
-        ws.title='物料导入表'
-        for i in range(0,len(header_line1)):
-            ws.cell(row=1,column=i+1).value=header_line1[i]  
-
-        for i in range(0,len(header_line2)):
-            ws.cell(row=2,column=i+1).value=header_line2[i]
-
-        for i in range(1, self.mr_rows+1):
-            ws.cell(row=i+2, column=1).value = self.mat_dic[i][col_header[2]]
-            ws.cell(row=i+2, column=2).value = self.mat_dic[i][col_header[5]]
-            ws.cell(row=i+2, column=4).value = self.mat_dic[i][col_header[3]]
-            ws.cell(row=i+2, column=5).value = self.mat_dic[i][col_header[4]]
-            ws.cell(row=i+2, column=10).value = self.mat_dic[i][col_header[6]]
-            ws.cell(row=i+2, column=11).value = self.mat_dic[i][col_header[7]]
-            ws.cell(row=i+2, column=12).value = self.mat_dic[i][col_header[8]]
-            ws.cell(row=i+2, column=14).value = self.mat_dic[i][col_header[9]]
-            ws.cell(row=i+2, column=3).value = self.mat_dic[i][col_header[11]]
-            
-        if excel_xlsx.save_workbook(workbook=wb, filename=file_str):
-            messagebox.showinfo("输出","成功输出!")  
 
     def wl_result(self, event):
         self.mr_rows = 0
@@ -1406,10 +1543,10 @@ class mat_fin_pane(Frame):
         #self.mat_list.selection_remove(items[0])
         for item in items:
             self.mat_list.selection_add(item)
-
+    '''
     def copy_clip_process(self):
         wbs_sel = WBSSelDialog(self, 'WBS List粘贴')
-            
+    '''        
     def __mat_list(self,choice, mats, comment=None):
         s_error=''
         i_error=0
@@ -1534,6 +1671,7 @@ class proj_release_pane(Frame):
     '''    
     '''
     pos = None
+    prj_thread = None
     wbs_dic={} # 存储相关WBS NO相关信息， key- wbs no, value=[project_cols顺序存储的值]
     wbs_keys=[]
     func_list = ['配置完成未release项目','已经release项目','正在配置项目','重排产项目','未启动配置项目']
@@ -1558,7 +1696,7 @@ class proj_release_pane(Frame):
         
         self.refresh_button=Button(self, text='刷新数据')
         self.refresh_button.grid(row=1, column=2, sticky=NSEW)
-        self.refresh_button['command']=self.__refresh_list
+        self.refresh_button['command']=self.refresh_by_hand
         
         self.release_button=Button(self, text='项目release')
         self.release_button.grid(row=0, column=2, sticky=NSEW)
@@ -1666,6 +1804,10 @@ class proj_release_pane(Frame):
             self.wbs_list.selection_remove(item)
             
     def proj_export(self):
+        if self.prj_thread.is_alive():
+            messagebox.showinfo('提示','表单刷新线程正在后台刷新列表，请等待完成后再点击!')
+            return
+        
         items = self.wbs_list.selection()
         if not items:        
             return
@@ -2057,6 +2199,10 @@ class proj_release_pane(Frame):
         messagebox.showinfo('releas结果','release成功:'+str(i_count-i_fail)+';失败:'+str(i_fail))
         
     def select_func(self, event=None):
+        if self.prj_thread.is_alive():
+            messagebox.showinfo('提示','表单刷新线程正在后台刷新列表，请等待完成后再点击!')
+            return
+                
         self.__refresh_list()
     
     def refresh(self):
@@ -2216,15 +2362,28 @@ class proj_release_pane(Frame):
         
         return item      
                                
-    def __refresh_list(self):
-        prj_thread= refresh_thread(self)
-        prj_thread.setDaemon(True)
-        prj_thread.start()
+    def __refresh_list(self):  
+        self.prj_thread= refresh_thread(self)
+        self.prj_thread.setDaemon(True)
+        self.prj_thread.start()
         #threads.append(prj_thread)
+        
+    def refresh_by_hand(self):
+        if self.prj_thread.is_alive():
+            messagebox.showinfo('提示','表单刷新线程正在后台刷新列表，请等待完成后再点击!')
+            return
+            
+        self.__refresh_list()
 
     def __loop_refresh(self):
+        if not self.prj_thread:
+            pass
+        elif self.prj_thread.is_alive():
+            messagebox.showinfo('提示','表单刷新线程正在后台运行, 15分钟后自动刷新进程重新启动!')
+            time.sleep(900)
+            
         self.__refresh_list()
-        self.wbs_list.after(1800000, self.__loop_refresh)
+        self.wbs_list.after(3600000, self.__loop_refresh)
         
 class his_display(Toplevel):
     def __init__(self, parent, title, case_list, choice ):

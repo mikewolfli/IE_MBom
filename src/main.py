@@ -23,7 +23,7 @@ class LoginForm(Toplevel):
             self.title(title)
 
         self.parent = parent
-        self.grab_set()
+        
         body = Frame(self)
         self.initial_focus = self.body(body)
         body.pack(padx=5, pady=5)
@@ -44,7 +44,7 @@ class LoginForm(Toplevel):
 
         # wait for window to appear on screen before calling grab_set
         self.wait_visibility()
-        
+        self.grab_set()
         self.wait_window(self) 
             
     def body(self, master):
