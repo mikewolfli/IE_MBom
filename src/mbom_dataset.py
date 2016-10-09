@@ -78,6 +78,8 @@ Nonstd_Level={
     23: 'Others'
 }
 
+#mbom_db = PostgresqlDatabase('nstd_mat_db_test',user='postgres',password='1q2w3e4r',host='10.127.144.62',)
+
 #mbom_db = PostgresqlDatabase('nstd_mat_db',user='postgres',password='',host='localhost',)
 mbom_db = PostgresqlDatabase('nstd_mat_db',user='postgres',password='1q2w3e4r',host='10.127.144.62',)
 
@@ -151,7 +153,131 @@ class nstd_app_link(BaseModel):
     class Meta:
         primary_key = CompositeKey('nstd_app', 'wbs_no')
         db_table = 'nstd_app_link'
- 
+
+class id_generator(BaseModel):
+    id = PrimaryKeyField()
+    func_desc = CharField(null=True, max_length=255)
+    step = IntegerField(default=1)
+    current = IntegerField()
+    id_length = IntegerField(default=24)
+    pre_character = CharField(null=True, max_length=6)
+    fol_character = CharField(null=True, max_length=12)
+    remark = TextField(null=True)
+    
+    class Meta:
+        db_table = 'id_generator'
+              
+class mat_basic_info(BaseModel):
+    mat_no = CharField(primary_key=True, max_length=18)
+    mat_name_en = CharField(null=True,max_length=255)
+    mat_name_cn = CharField(max_length=128)
+    gross_weight = CharField(null=True)
+    base_unit = CharField(null=True, choices=Unit_Types)
+    mat_type = CharField(null=True)
+    normt = CharField(null=True)
+    old_mat_no = CharField(null=True)
+    doc_no = CharField(null=True)
+    size_dimen = CharField(null=True)
+    parameter = CharField(null=True)
+    
+    class Meta:
+        db_table='mat_basic_info'
+        
+class struct_group_code(BaseModel):
+    st_code = CharField(primary_key=True, max_length=16)
+    st_name_en = CharField(null=True,max_length=255)
+    st_name_cn = CharField(null=True, max_length=128)
+    m_or_e = CharField(null=True, max_length=4)
+    
+    class Meta:
+        db_table='struct_group_code'
+
+class struct_gc_rel(BaseModel):
+    st_code = ForeignKeyField(struct_group_code, to_field='st_code', on_delete='CASCADE')
+    plant = CharField(max_length=6)
+    elevator_type = CharField(null=True, max_length=12)
+    rp = CharField(null=True, max_length=6)  
+    box_code= CharField(null=True, max_length=8)
+    
+    class Meta:
+        db_table='struct_gc_rel'
+
+class mat_extra_info(BaseModel):
+    mat_no = ForeignKeyField(mat_basic_info, to_field='mat_no', on_delete='CASCADE')
+    lgfsb = CharField(max_length=4, null=True)
+    lgpro = CharField(max_length=4, null=True)
+    mrp_controller = CharField(max_length=3, null=True)
+    sbdkz = CharField(max_length=1, null=True)
+    prod_scheduler=CharField(max_length=3, null=True)
+    sobsk = CharField(max_length=2, null=True)
+    proc_type = CharField(max_length=1, null=True)
+    spec_proc_type = CharField(max_length=2, null=True)
+    matgr = CharField(max_length=20, null=True)
+    mat_freight_group = CharField(null=True)
+    plant = CharField(max_length=4, null=True)
+    price_con_ind = CharField(max_length=1, null=True)
+    val_type = CharField(max_length=10, null=True)
+    val_area = CharField(max_length=4, null=True)
+    val_class = CharField(max_length=4, null=True)
+    remarks = TextField(null=True)
+    
+    class Meta:
+        db_table='mat_extra_info'
+        
+class mat_info(BaseModel):
+    mat_no = CharField(primary_key=True, max_length=18)
+    mat_name_en = CharField(null=True,max_length=255)
+    mat_name_cn = CharField(max_length=128)
+    drawing_no = CharField(null=True, max_length=32)
+    mat_material = CharField(null=True, max_length= 255)
+    mat_material_en = CharField(null=True, max_length= 255)
+    part_weight = DecimalField(max_digits=10, decimal_places=3, null=True)
+    mat_unit = CharField(max_length=16, choices=Unit_Types)
+    comments = TextField(null=True) 
+    rp = CharField(null=True, max_length=6)  
+    rp_zs = CharField(null=True, max_length=6)
+    box_code_sj = CharField(null=True, max_length=8)
+    box_code_zs = CharField(null=True, max_length=8) 
+    is_nonstd = BooleanField(default=False)  
+    modify_by = CharField(null=True, max_length=12)
+    modify_on = DateTimeField(formats='%Y-%m-%d %H:%M:%S', null=True)
+
+    class Meta:
+        db_table = 'mat_info'
+        
+class bom_header(BaseModel):
+    bom_id = CharField(primary_key=True, unique=True, max_length=32)
+    plant = CharField(max_length=8)    
+    mat_no = ForeignKeyField(mat_info, to_field='mat_no')
+    drawing_no = CharField(null=True, max_length=32)
+    revision = CharField(null=True, max_length=16)
+    is_active = BooleanField(default=True)
+    struct_code = CharField(null=True, max_length=32)
+    modify_by = CharField(null=True, max_length=12)
+    modify_on = DateTimeField(formats='%Y-%m-%d %H:%M:%S', null=True)
+    create_by = CharField(null=True, max_length=12)
+    create_on = DateTimeField(formats='%Y-%m-%d %H:%M:%S', null=True)  
+    
+    class Meta:
+        db_table = 'bom_header'  
+    
+class bom_item(BaseModel):
+    bom_id = ForeignKeyField(bom_header, to_field='bom_id', on_delete='CASCADE')
+    index = IntegerField()
+    st_no = CharField(max_length=32)
+    component = ForeignKeyField(mat_info, to_field='mat_no')
+    qty = DecimalField(max_digits=10, decimal_places=2)
+    bom_remark = TextField(null=True)
+    parent_mat = CharField(null=True, max_length=18)
+    modify_by = CharField(null=True, max_length=12)
+    modify_on = DateTimeField(formats='%Y-%m-%d %H:%M:%S', null=True)
+    create_by = CharField(null=True, max_length=12)
+    create_on = DateTimeField(formats='%Y-%m-%d %H:%M:%S', null=True)     
+    
+    class Meta:
+        primary_key = CompositeKey('bom_id', 'st_no')
+        db_table = 'bom_item'
+         
 class nstd_mat_table(BaseModel):
     mat_no = CharField(primary_key=True, max_length=18)
     mat_name_en = CharField(null=True,max_length=255)
@@ -165,6 +291,7 @@ class nstd_mat_table(BaseModel):
     mat_unit = CharField(max_length=16, choices=Unit_Types)
     comments = TextField(null=True)
     rp = CharField(null=True, max_length=6)
+    rp_zs = CharField(null=True, max_length=6)
     group_code = CharField(null=True, max_length=16)
     box_code_sj = CharField(null=True, max_length=8)
     box_code_zs = CharField(null=True, max_length=8)

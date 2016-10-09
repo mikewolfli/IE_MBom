@@ -9,7 +9,7 @@ from TabPanes import *
 
 global login_info
 
-tree_items=['非标物料导入','IE项目列表','项目release']
+tree_items=['非标物料导入','IE项目列表','项目release','EDS项目处理']
 
 class LoginForm(Toplevel):
     def __init__(self, parent, title=None):
@@ -158,6 +158,7 @@ class mainframe(Frame):
     import_tab = None
     operat_tab = None
     proj_release_tab=None
+    eds_tab=None
     def __init__(self, master=None):
         Frame.__init__(self, master)
         self.pack()
@@ -234,6 +235,7 @@ class mainframe(Frame):
                     self.ntbook.add(self.import_tab, text=nt_title, sticky=NSEW)
                     self.tree.set(sel, 'col0', i_sel)
                     self.ntbook.select(i_sel)
+                    self.st_msg.set('')
                 else:
                     self.st_msg.set('没有权限')
                     return
@@ -243,6 +245,7 @@ class mainframe(Frame):
                     self.ntbook.add(self.operat_tab, text=nt_title, sticky=NSEW) 
                     self.tree.set(sel, 'col0', i_sel)
                     self.ntbook.select(i_sel)
+                    self.st_msg.set('')
                 else:
                     self.st_msg.set('没有权限')
                     return
@@ -252,6 +255,18 @@ class mainframe(Frame):
                     self.ntbook.add(self.proj_release_tab, text=nt_title, sticky=NSEW) 
                     self.tree.set(sel, 'col0', i_sel)
                     self.ntbook.select(i_sel)
+                
+                    self.st_msg.set('')
+                else:
+                    self.st_msg.set('没有权限')
+                    return 
+            elif i_index==3:
+                if not self.eds_tab and int(s_perm[i_index])>0:
+                    self.eds_tab = eds_pane(self)
+                    self.ntbook.add(self.eds_tab, text=nt_title, sticky=NSEW)
+                    self.tree.set(sel, 'col0', i_sel)
+                    self.ntbook.select(i_sel)
+                    self.st_msg.set('')
                 else:
                     self.st_msg.set('没有权限')
                     return 

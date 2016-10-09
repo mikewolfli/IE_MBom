@@ -25,12 +25,26 @@ import functools
 import ctypes
 from tkcalendar import *
 import os,sys
+from openpyxl import *
+from openpyxl import writer
+from openpyxl.drawing.image import Image
+from openpyxl.styles import Border, Side, Font
+from openpyxl.worksheet.properties import WorksheetProperties, PageSetupProperties
+import xlrd
+import xlwt
+from xlutils.copy import copy
+from decimal import Decimal
+import pyrfc
+import threading
+import base64
+from configparser import ConfigParser
+import logging 
 
 login_info ={'uid':'','pwd':'','status':False,'perm':'0000'}
 
 NAME = '非标物料处理 '
 PUBLISH_KEY=' R ' #R - release , B - Beta , A- Alpha
-VERSION = '1.0.1'
+VERSION = '1.1.0'
 '''
 界面权限：
 0 - 无权限
@@ -160,7 +174,7 @@ def treeview_sort_column(tv, col, reverse):
         tv.move(k, '', index)
 
     tv.heading(col,command=lambda: treeview_sort_column(tv, col, not reverse))
-        
+       
 def center(toplevel):
     toplevel.update_idletasks()
     w = toplevel.winfo_screenwidth()
@@ -218,7 +232,7 @@ class ScrolledTextDlg(simpledialog.Dialog):
             if len(res.rstrip())==0:
                 continue
             
-            if len(res.rstrip())!=9 and self.method==0:
+            if len(res.rstrip())!=9 and (self.method==0 or self.method==2):
                 messagebox.showwarning("Illegal value", '物料号字符串长度为9位')
                 return 0 
                 
@@ -238,9 +252,10 @@ class ScrolledTextDlg(simpledialog.Dialog):
 
         if count==0:
             return 0
-                   
-        if messagebox.askyesno('是否继续','执行数据数量: '+str(count)+' 条;此操作不可逆，是否继续(YES/NO)?')==NO:
-            return 0
+        
+        if self.method!=2:          
+            if messagebox.askyesno('是否继续','执行数据数量: '+str(count)+' 条;此操作不可逆，是否继续(YES/NO)?')==NO:
+                return 0
         
         self.result=res_res
         return 1
