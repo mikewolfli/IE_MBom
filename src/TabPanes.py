@@ -2931,7 +2931,6 @@ class eds_pane(Frame):
     └── 2
     '''
     hibe_mats=[]
-    no_need_mats=[]
     mat_list = {} #从文件读取的文件列表，以 数字1，2，...为keys
     bom_items = [] #存储有下层BOM的节点，treeview 控件的节点
     mat_items = {} #以物料号为key,存储涉及BOM的物料清单 ，包括下层物料。
@@ -3301,7 +3300,7 @@ class eds_pane(Frame):
     
     def create_nstd_mat_table(self, nstd_id, res):
         logger.info('正在保存非标物料到维护列表中...')
-        self.no_need_mats=[]
+        no_need_mats=[]
         try:
             nstd_app_head.get(nstd_app_head.nstd_app == nstd_id)
             logger.warning('非标申请:'+nstd_id+'已经存在，故未重新创建!')        
@@ -3323,9 +3322,8 @@ class eds_pane(Frame):
                 r=nstd_app_head.select().join(nstd_mat_table).where(nstd_mat_table.mat_no==mat).naive().get()
                 nstd_app = none2str(r.nstd_app)
                 logger.error('非标物料:'+mat+'已经在非标申请:'+nstd_app+'中提交，请勿重复提交！')
-                if nstd_id != nstd_app and mat not in self.no_need_mats:
-                    self.no_need_mats.append(mat)
-                    self.nstd_mat_list.remove(mat)
+                if nstd_id != nstd_app and mat not in no_need_mats:
+                    no_need_mats.append(mat)
             except nstd_app_head.DoesNotExist:
                 rp_sj=''
                 box_sj=''
@@ -3351,6 +3349,9 @@ class eds_pane(Frame):
                 nstd_mat_fin.create(mat_no=mat,justify=-1, mbom_fin=False,\
                                     pu_price_fin=False, co_run_fin=False, modify_by=login_info['uid'], modify_on=datetime.datetime.now())
         
+        for mat in no_need_mats:
+            self.nstd_mat_list.remove(mat)
+            
         if len(self.nstd_mat_list)==0:
             logger.error(' 所有非标物料已经在另外的非标申请中提交，请勿重复提交!') 
             return False
