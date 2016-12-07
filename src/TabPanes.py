@@ -169,6 +169,7 @@ class import_pane(Frame):
             ws.cell(row=i+3, column=17).value = self.mat_dic[i][col_header[8]]
             ws.cell(row=i+3, column=18).value = self.mat_dic[i][col_header[4]]
             ws.cell(row=i+3, column=19).value = self.mat_dic[i][col_header[6]]
+            ws.cell(row=i+3, column=12).value = self.mat_dic[i][col_header[7]]
             
             if nstd != self.mat_dic[i][col_header[0]] or  len(nstd)==0:             
                 nstd=self.mat_dic[i][col_header[0]]              
@@ -381,7 +382,7 @@ class import_pane(Frame):
                         
                 nstd_app_head.create(nstd_app=nstd_id, project=prj, index_mat='NONCE') 
                 
-                if len(item['wbs'])!=0:
+                if len(item['wbs'])!=0 and item['wbs'].startswith('E/'):
                     for wbs in self.nstd_dic[nstd_id]:
                         nstd_app_link.get_or_create(nstd_app=nstd_id, wbs_no=wbs, mbom_fin=False)                     
             
@@ -528,6 +529,10 @@ class import_pane(Frame):
         for wbs in wbs_list:  
             if  len(wbs.strip())==0 and len(wbs_list)>1:
                 continue
+            
+            if not wbs.startswith('E/'):
+                continue
+            
             nstd_app_link.get_or_create(nstd_app=nstd_id, wbs_no=wbs[0:14], mbom_fin=False) 
 
         rows = ws1.max_row-1
@@ -3004,7 +3009,7 @@ class eds_pane(Frame):
         
         self.import_bom_List = Button(self.ie_body, text='生成BOM导入表')
         self.import_bom_List.grid(row=1, column=0, sticky=NSEW)
-        self.import_bom_List['command']=self.import_bom_list
+        self.import_bom_List['command']=self.import_bom_list_x
         
         self.ntbook = ttk.Notebook(self)        
         self.ntbook.rowconfigure(0, weight=1)
@@ -3185,7 +3190,62 @@ class eds_pane(Frame):
             logger.info('生成PDM BOM导入清单:'+pdm_bom_str+' 成功!')
         else:
             logger.info('文件保存失败!')
-                       
+    
+    def import_bom_list_x(self): 
+        if len(self.bom_items)==0:
+            logger.warning('没有bom结构，请先搜索物料BOM')
+            return
+    
+        if self.sap_thread is not None and self.sap_thread.is_alive():
+            messagebox.showinfo('提示','正在后台检查SAP非标物料，请等待完成后再点击!')
+            return  
+        
+        if len(self.nstd_mat_list) != 0:
+            logger.warning('此物料BOM中包含未维护进SAP系统的物料，请等待其维护完成')
+            return
+        
+        file_str=filedialog.asksaveasfilename(title="导出文件", initialfile="temp",filetypes=[('excel file','.xlsx')])
+        if not file_str:
+            return
+
+        if not file_str.endswith(".xlsx"):
+            file_str+=".xlsx"        
+
+        temp_file = os.path.join(cur_dir(),'bom.xlsx')
+        wb = load_workbook(temp_file) 
+        ws = wb.get_sheet_by_name('BOM')
+        
+        logger.info('正在生成文件'+file_str)
+        i=4
+        for it in self.bom_items:
+            p_mat = self.mat_tree.item(it, 'values')[1]
+            logger.info('正在构建物料'+p_mat+'的BOM导入清单...')
+            p_name = self.mat_tree.item(it, 'values')[2]
+            children = self.mat_tree.get_children(it)
+            for child in children:
+                value = self.mat_tree.item(child, 'values')
+                c_mat = value[1]
+                c_name = value[2]
+                ws.cell(row=i, column=1).value= p_mat
+                ws.cell(row=i, column=2).value= p_name
+                ws.cell(row=i, column=6).value= c_mat
+                ws.cell(row=i, column=7).value= c_name
+                ws.cell(row=i, column=3).value= 2102
+                ws.cell(row=i, column=4).value= 1
+                if c_mat in self.hibe_mats:
+                    ws.cell(row=i, column=5).value= 'N'
+                else:
+                    ws.cell(row=i, column=5).value= 'L'
+                    ws.cell(row=i, column=15).value = 'X'
+                    
+                ws.cell(row=i, column=8).value=float(value[5])
+                i+=1
+                        
+        if writer.excel.save_workbook(workbook=wb, filename=file_str):
+            logger.info('生成BOM导入清单文件:'+file_str+' 成功!')
+        else:
+            logger.info('文件保存失败!')
+                     
     def import_bom_list(self):
         if len(self.bom_items)==0:
             logger.warning('没有bom结构，请先搜索物料BOM')
@@ -3366,14 +3426,10 @@ class eds_pane(Frame):
         wbses = res['units']
         ws.cell(row=7, column=12).value = self.combine_wbs(wbses)
         
-        if page==1 and count<=28:
-            ran=count
-        elif (page==1 and count>28):
-            ran = 28
-        elif (count%((page-1)*28)>28 and page>1):
+        if count-count%(page*28)>0:
             ran = 28
         else:
-            ran = count%((page-1)*28)
+            ran = count%28
         
         for i in range(1, ran+1):
             mat = self.nstd_mat_list[((page-1)*28+i-1)]
@@ -4197,4 +4253,16 @@ TKEC.SJ-F-03-03'''
     
     def change_log(self,table,section,key, old,new):
         q = s_change_log.insert(table_name=table,change_section=section,key_word=str(key),old_value=str(old),new_value=str(new),log_on=datetime.datetime.now(), log_by=login_info['uid'] )
-        q.execute()                
+        q.execute()   
+        
+        
+#分箱程序
+class packing_pane(Frame):
+    def __init__(self,master=None):
+        Frame.__init__(self, master)
+        self.grid()
+        
+        self.createWidgets()
+        
+    def createWidgets(self):
+        pass               
