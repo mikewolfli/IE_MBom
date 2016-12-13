@@ -3216,7 +3216,7 @@ class eds_pane(Frame):
         ws = wb.get_sheet_by_name('BOM')
         
         logger.info('正在生成文件'+file_str)
-        i=4
+        i=5
         for it in self.bom_items:
             p_mat = self.mat_tree.item(it, 'values')[1]
             logger.info('正在构建物料'+p_mat+'的BOM导入清单...')
@@ -3256,8 +3256,9 @@ class eds_pane(Frame):
             return  
         
         if len(self.nstd_mat_list) != 0:
-            logger.warning('此物料BOM中包含未维护进SAP系统的物料，请等待其维护完成')
-            return
+            #logger.warning('此物料BOM中包含未维护进SAP系统的物料，请等待其维护完成')
+            if messagebox.askyesno('确认导出','此物料BOM中包含未维护进SAP系统的物料，是否继续(YES/NO)?')==NO:
+                return
         
         file_str=filedialog.asksaveasfilename(title="导出文件", initialfile="temp",filetypes=[('excel file','.xls')])
         if not file_str:
@@ -3289,11 +3290,12 @@ class eds_pane(Frame):
                 ws.write(i, 6, c_name)
                 ws.write(i, 2, 2102)
                 ws.write(i, 3, 1)
-                if c_mat in self.hibe_mats:
-                    ws.write(i, 4, 'N')
-                else:
-                    ws.write(i, 4, 'L')
-                    ws.write(i, 14, 'X')
+                if c_mat not in self.nstd_mat_list:
+                    if c_mat in self.hibe_mats:
+                        ws.write(i, 4, 'N')
+                    else:
+                        ws.write(i, 4, 'L')
+                        ws.write(i, 14, 'X')
                     
                 ws.write(i, 7, float(value[5]))
                 i+=1
