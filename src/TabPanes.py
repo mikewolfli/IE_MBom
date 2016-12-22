@@ -3201,8 +3201,9 @@ class eds_pane(Frame):
             return  
         
         if len(self.nstd_mat_list) != 0:
-            logger.warning('此物料BOM中包含未维护进SAP系统的物料，请等待其维护完成')
-            return
+            #logger.warning('此物料BOM中包含未维护进SAP系统的物料，请等待其维护完成')
+            if messagebox.askyesno('确认导出','此物料BOM中包含未维护进SAP系统的物料，是否继续(YES/NO)?')==NO:
+                return
         
         file_str=filedialog.asksaveasfilename(title="导出文件", initialfile="temp",filetypes=[('excel file','.xlsx')])
         if not file_str:

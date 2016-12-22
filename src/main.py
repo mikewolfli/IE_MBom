@@ -9,7 +9,7 @@ from TabPanes import *
 
 global login_info
 
-tree_items=['非标物料导入','IE项目列表','项目release','EDS项目处理']
+tree_items=['非标物料导入','IE项目列表','项目release','EDS项目处理','WBS BOM导出']
 
 class LoginForm(Toplevel):
     def __init__(self, parent, title=None):
