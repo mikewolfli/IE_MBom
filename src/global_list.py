@@ -17,9 +17,7 @@ import tkinter.ttk as ttk
 from mbom_dataset import *
 from openpyxl import Workbook, load_workbook, reader
 import openpyxl.writer.excel as excel_xlsx
-#from tkintertable import *
-import pandas as pd
-from pandastable import Table, TableModel
+
 import threading
 import functools
 import ctypes
@@ -40,11 +38,14 @@ import base64
 from configparser import ConfigParser
 import logging 
 
-login_info ={'uid':'','pwd':'','status':False,'perm':'0000'}
+login_info ={'uid':'','pwd':'','status':False,'perm':'0000','plant':'2101'}
 
 NAME = '非标物料处理 '
 PUBLISH_KEY=' R ' #R - release , B - Beta , A- Alpha
-VERSION = '1.3.1'
+VERSION = '2.0.0'
+'''
+exman 程序集成到此版本中，exman终止。
+'''
 '''
 界面权限：
 0 - 无权限
@@ -326,3 +327,20 @@ def get_name(pid):
         return 'None'
 
     return s_name
+
+def change_log(table,section,key, old,new):
+    q = s_change_log.insert(table_name=table,change_section=section,key_word=str(key),old_value=str(old),new_value=str(new),log_on=datetime.datetime.now(), log_by=login_info['uid'] )
+    q.execute()
+    
+#threads=[]
+threadLock = threading.Lock()
+class refresh_thread(threading.Thread):
+    def __init__(self, pane, typ=None):
+        threading.Thread.__init__(self)
+        self.pane=pane
+        self.type=typ
+
+    def run(self):
+        threadLock.acquire()
+        self.pane.refresh()
+        threadLock.release()  

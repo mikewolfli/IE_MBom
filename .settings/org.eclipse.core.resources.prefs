@@ -1,6 +1,12 @@
 eclipse.preferences.version=1
-encoding//src/TabPanes.py=utf-8
+encoding//src/eds_pane.py=utf-8
 encoding//src/global_list.py=utf-8
+encoding//src/import_pane.py=utf-8
 encoding//src/main.py=utf-8
+encoding//src/mat_fin_pane.py=utf-8
 encoding//src/mbom_dataset.py=utf-8
+encoding//src/packing_pane.py=utf-8
+encoding//src/proj_release_pane.py=utf-8
+encoding//src/py2exe_setup.py=utf-8
+encoding//src/py2exe_setup_old.py=utf-8
 encoding//src/tkcalendar.py=utf-8

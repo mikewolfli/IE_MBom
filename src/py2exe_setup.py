@@ -24,7 +24,6 @@ setup(
             'dll_excludes': ['MSVCP90.dll', 'HID.DLL', 'w9xpopen.exe']
         }
     },
-    windows = [{'script': 'main.py',
-	            'icon_resources': [(1, "ieico.ico")]}],  # The name of your main script file
+    windows = [{'script': 'main.py','icon_resources': [(1, "ieico.ico")]}],  # The name of your main script file
     zipfile = None
 )

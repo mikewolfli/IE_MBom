@@ -5,11 +5,15 @@
   Purpose: 
   Created: 2016/4/7
 """
-from TabPanes import *
+from eds_pane import *
+from import_pane import *
+from mat_fin_pane import  *
+from proj_release_pane import *
+from packing_pane import * 
 
 global login_info
 
-tree_items=['非标物料导入','IE项目列表','项目release','EDS项目处理','WBS BOM导出']
+tree_items=['非标物料导入','IE项目列表','项目release','EDS项目处理','分箱处理','WBS BOM查询']
 
 class LoginForm(Toplevel):
     def __init__(self, parent, title=None):
@@ -159,6 +163,8 @@ class mainframe(Frame):
     operat_tab = None
     proj_release_tab=None
     eds_tab=None
+    packing_tab=None
+    wbs_bom_tab = None
     def __init__(self, master=None):
         Frame.__init__(self, master)
         self.pack()
@@ -221,7 +227,9 @@ class mainframe(Frame):
             return
         
         sel=select[0]
+        #print(self.tree.item(sel, 'values'))
         i_per = int(self.tree.item(sel, 'values')[0])
+        #print(i_per)
         s_perm = login_info['perm']
                       
         i_sel = self.ntbook.index(END)
@@ -270,6 +278,18 @@ class mainframe(Frame):
                 else:
                     self.st_msg.set('没有权限')
                     return 
+            elif i_index==4:
+                if not self.packing_tab and int(s_perm[i_index])>0:
+                    self.packing_tab = packing_pane(self)
+                    self.ntbook.add(self.packing_tab, text=nt_title, sticky=NSEW)
+                    self.tree.set(sel, 'col0', i_sel)
+                    self.ntbook.select(i_sel)
+                    self.st_msg.set('')
+                else:
+                    self.st_msg.set('没有权限')
+                    return  
+            elif i_index==5:
+                self.st_msg.set('开发中，请耐心等待!')               
         else:
             if int(s_perm[i_per]) <= 0:
                 self.st_msg.set('没有权限')
