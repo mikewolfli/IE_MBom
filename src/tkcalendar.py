@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-#coding:utf-8
+# coding:utf-8
 """
   Author:   10256603<mikewolf.li@tkeap.com>
-  Purpose: 
+  Purpose:
   Created: 2016/4/7
 """
 import calendar
@@ -14,9 +14,9 @@ year = time.localtime()[0]
 month = time.localtime()[1]
 day = time.localtime()[2]
 DATE_DELIMITER = '-'
-strdate = (str(year) + DATE_DELIMITER + \
-    '{0:0>2}'.format(str(month)) + DATE_DELIMITER + \
-    '{0:0>2}'.format(str(day)))
+strdate = (str(year) + DATE_DELIMITER +
+           '{0:0>2}'.format(str(month)) + DATE_DELIMITER +
+           '{0:0>2}'.format(str(day)))
 
 fntTitle = ("Times", 10, 'bold')
 fntHeader = ("Times", 11)
@@ -29,42 +29,43 @@ lang = "zh"
 if lang == "zh":
     # Chinese Options
     strtitle = "选择日期"
-    strdays= "日  一  二  三  四  五  六"
+    strdays = "日  一  二  三  四  五  六"
     dictmonths = {'1': '一月', '2': '二月', '3': '三月', '4': '四月', '5': '五月',
-        '6': '六月', '7': '七月', '8': '八月', '9': '九月', '10': '十月',
-        '11': '十一月', '12': '十二月'}
+                  '6': '六月', '7': '七月', '8': '八月', '9': '九月', '10': '十月',
+                  '11': '十一月', '12': '十二月'}
 else:
     # English Options
     strtitle = "Calendar"
     strdays = "Su  Mo  Tu  We  Th  Fr  Sa"
     dictmonths = {'1': 'Jan', '2': 'Feb', '3': 'Mar', '4': 'Apr', '5': 'May',
-        '6': 'Jun', '7': 'Jul', '8': 'Aug', '9': 'Sep', '10': 'Oct',
-        '11': 'Nov', '12': 'Dec'}
+                  '6': 'Jun', '7': 'Jul', '8': 'Aug', '9': 'Sep', '10': 'Oct',
+                  '11': 'Nov', '12': 'Dec'}
 
 ##############################################
 #  BEGIN CLASS
 
+
 class tkCalendar(object):
 
     def __init__(self, master, arg_year, arg_month, arg_day,
-        arg_parent_updatable_var):
+                 arg_parent_updatable_var):
         self.update_var = arg_parent_updatable_var
         top = self.top = tk.Toplevel(master)
         try:
             self.intmonth = int(arg_month)
         except:
             self.intmonth = int(1)
-        self.canvas =tk.Canvas(top, width=200, height=220,
-            relief=tk.RIDGE, background="white", borderwidth=1)
+        self.canvas = tk.Canvas(top, width=200, height=220,
+                                relief=tk.RIDGE, background="white", borderwidth=1)
         self.canvas.create_rectangle(0, 0, 303, 30, fill="#a4cae8", width=0)
         self.canvas.create_text(100, 17, text=strtitle, font=fntTitle,
-            fill="#2024d6")
+                                fill="#2024d6")
         stryear = str(arg_year)
 
         self.year_var = tk.StringVar()
         self.year_var.set(stryear)
         self.lblYear = tk.Label(top, textvariable=self.year_var,
-            font=fntHeader, background="white")
+                                font=fntHeader, background="white")
         self.lblYear.place(x=85, y=30)
 
         self.month_var = tk.StringVar()
@@ -73,12 +74,12 @@ class tkCalendar(object):
         self.month_var.set(strmonth)
 
         self.lblYear = tk.Label(top, textvariable=self.month_var,
-            font=fntHeader, background="white")
+                                font=fntHeader, background="white")
         self.lblYear.place(x=85, y=50)
-        #Variable muy usada
+        # Variable muy usada
         tagBaseButton = "Arrow"
         self.tagBaseNumber = "DayButton"
-        #draw year arrows
+        # draw year arrows
         x, y = 30, 43
         tagThisButton = "leftyear"
         tagFinalThisButton = tuple((tagBaseButton, tagThisButton))
@@ -87,7 +88,7 @@ class tkCalendar(object):
         tagThisButton = "rightyear"
         tagFinalThisButton = tuple((tagBaseButton, tagThisButton))
         self.fnCreateRightArrow(self.canvas, x, y, tagFinalThisButton)
-        #draw month arrows
+        # draw month arrows
         x, y = 40, 63
         tagThisButton = "leftmonth"
         tagFinalThisButton = tuple((tagBaseButton, tagThisButton))
@@ -96,7 +97,7 @@ class tkCalendar(object):
         tagThisButton = "rightmonth"
         tagFinalThisButton = tuple((tagBaseButton, tagThisButton))
         self.fnCreateRightArrow(self.canvas, x, y, tagFinalThisButton)
-        #Print days
+        # Print days
         self.canvas.create_text(100, 90, text=strdays, font=fntHeader)
         self.canvas.pack(expand=1, fill=tk.BOTH)
         self.canvas.tag_bind("Arrow", "<ButtonRelease-1>", self.fnClick)
@@ -108,14 +109,14 @@ class tkCalendar(object):
         self.canvas.bind(event, args)
 
     def fnCreateRightArrow(self, canv, x, y, strtagname):
-        canv.create_polygon(x, y, [[x+0, y-5], [x+10, y-5], [x+10, y-10],
-            [x+20, y+0], [x+10, y+10], [x+10, y+5], [x+0, y+5]],
-            tags=strtagname, fill="blue", width=0)
+        canv.create_polygon(x, y, [[x + 0, y - 5], [x + 10, y - 5], [x + 10, y - 10],
+                                   [x + 20, y + 0], [x + 10, y + 10], [x + 10, y + 5], [x + 0, y + 5]],
+                            tags=strtagname, fill="blue", width=0)
 
     def fnCreateLeftArrow(self, canv, x, y, strtagname):
-        canv.create_polygon(x, y, [[x+10, y-10], [x+10, y-5], [x+20, y-5],
-            [x+20, y+5], [x+10, y+5], [x+10, y+10]],
-            tags=strtagname, fill="blue", width=0)
+        canv.create_polygon(x, y, [[x + 10, y - 10], [x + 10, y - 5], [x + 20, y - 5],
+                                   [x + 20, y + 5], [x + 10, y + 5], [x + 10, y + 10]],
+                            tags=strtagname, fill="blue", width=0)
 
     def fnClick(self, event):
         owntags = self.canvas.gettags(tk.CURRENT)
@@ -179,11 +180,11 @@ class tkCalendar(object):
                 else:
                     tagNumber = tuple((self.tagBaseNumber, stritem))
                     self.canvas.create_text(xpos, ypos, text=stritem,
-                        font=fntCal, tags=tagNumber)
+                                            font=fntCal, tags=tagNumber)
                     xpos += 27
             intposarr += 1
         self.canvas.tag_bind("DayButton", "<ButtonRelease-1>",
-            self.fnClickNumber)
+                             self.fnClickNumber)
         self.canvas.tag_bind("DayButton", "<Enter>", self.fnOnMouseOver)
         self.canvas.tag_bind("DayButton", "<Leave>", self.fnOnMouseOut)
 
@@ -194,8 +195,8 @@ class tkCalendar(object):
                 pass
             else:
                 strdate = (str(self.year_var.get()) + DATE_DELIMITER +
-                    '{0:0>2}'.format(str(self.intmonth)) + DATE_DELIMITER +
-                    '{0:0>2}'.format(str(x)))
+                           '{0:0>2}'.format(str(self.intmonth)) + DATE_DELIMITER +
+                           '{0:0>2}'.format(str(x)))
                 self.update_var.set(strdate)
                 self.top.withdraw()
 

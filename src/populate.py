@@ -44,7 +44,9 @@ class Application(Frame):
         Frame.__init__(self, master)
         
         mbom_db.connect()
-        mbom_db.create_tables([s_employee, operate_point, op_permission,login_log,nstd_app_head,nstd_app_link,nstd_mat_fin,nstd_mat_table])
+        mbom_db.create_tables([working_date,])
+        #mbom_db.create_tables([plist_header,plist_items,mboxes_table,box_mat_logic,boxid_rp_rel])
+        #mbom_db.create_tables([s_employee, operate_point, op_permission,login_log,nstd_app_head,nstd_app_link,nstd_mat_fin,nstd_mat_table])
         #nstd_mat_fin.get(nstd_mat_fin.mat_no=='330172045')
         #nstd_mat_fin.delete_instance(nstd_mat_table)
         mbom_db.close()
