@@ -5,7 +5,6 @@ Created on 2017年3月17日
 @author: 10256603
 '''
 from global_list import *
-from pywin.mfc.docview import TreeView
 global login_info
 
 
