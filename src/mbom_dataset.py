@@ -81,7 +81,7 @@ Nonstd_Level = {
 
 #mbom_db = PostgresqlDatabase('nstd_mat_db_test',user='postgres',password='1q2w3e4r',host='10.127.144.62',)
 
-mbom_db = PostgresqlDatabase('nstd_mat_db_dev',user='postgres',password='',host='localhost',)
+mbom_db = PostgresqlDatabase('nstd_mat_db_dev',user='postgres',password='1q2w3e4r',host='localhost',)
 #mbom_db = PostgresqlDatabase(
 #                'nstd_mat_db', user='postgres', password='1q2w3e4r', host='10.127.144.62',)
 

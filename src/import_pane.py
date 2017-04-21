@@ -719,8 +719,12 @@ class import_pane(Frame):
         s_str = self.wl_str.get()
 
         if s_str:
-            s_result = nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(
-                nstd_mat_fin).where(nstd_app_head.nstd_app.contains(s_str)).order_by(nstd_app_head.nstd_app.asc(), nstd_mat_table.mat_no.asc()).naive()
+            if len(s_str)==9:
+                s_result = nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(
+                    nstd_mat_fin).where(nstd_mat_table.mat_no==s_str).order_by(nstd_app_head.nstd_app.asc(), nstd_mat_table.mat_no.asc()).naive()                
+            else:
+                s_result = nstd_app_head.select(nstd_app_head, nstd_mat_table, nstd_mat_fin).join(nstd_mat_table).switch(nstd_mat_table).join(
+                    nstd_mat_fin).where(nstd_app_head.nstd_app.contains(s_str)).order_by(nstd_app_head.nstd_app.asc(), nstd_mat_table.mat_no.asc()).naive()
             if s_result:
                 for r in s_result:
                     mr_line = {}

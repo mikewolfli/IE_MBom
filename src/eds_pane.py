@@ -142,9 +142,6 @@ class eds_pane(Frame):
         self.import_bom_List.grid(row=1, column=0, sticky=NSEW)
         self.import_bom_List['command'] = self.import_bom_list_x
 
-        self.ntbook = ttk.Notebook(self)
-        self.ntbook.rowconfigure(0, weight=1)
-        self.ntbook.columnconfigure(0, weight=1)
         '''
                 清单式显示不够直观，同时pandastable表操作速度太慢，故只使用树形结构
         list_pane = Frame(self)
@@ -157,8 +154,16 @@ class eds_pane(Frame):
         self.mat_table.show()
         '''
         tree_pane = Frame(self)
+        self.head_label = Label(tree_pane)
+        self.head_label["text"] = "操作记录"
+        self.head_label.grid(row=0, column=0, sticky=W)
+        
         self.mat_tree = ttk.Treeview(
             tree_pane, columns=mat_cols, selectmode='extended')
+        
+        self.mat_tree.grid(row=1, column=0, rowspan=6,
+                           columnspan=2, sticky='nsew')
+        
         style = ttk.Style()
         style.configure("Treeview", font=('TkDefaultFont', 10))
         style.configure("Treeview.Heading", font=('TkDefaultFont', 9))
@@ -187,17 +192,15 @@ class eds_pane(Frame):
                             command=self.mat_tree.yview)
         xsb = ttk.Scrollbar(tree_pane, orient='horizontal',
                             command=self.mat_tree.xview)
-        ysb.grid(row=0, column=2, rowspan=2, sticky='ns')
-        xsb.grid(row=2, column=0, columnspan=2, sticky='ew')
+        ysb.grid(row=1, column=2, rowspan=6, sticky='ns')
+        xsb.grid(row=7, column=0, columnspan=2, sticky='ew')
 
         self.mat_tree.configure(yscroll=ysb.set, xscroll=xsb.set)
-        self.mat_tree.grid(row=0, column=0, rowspan=2,
-                           columnspan=2, sticky='nsew')
-        tree_pane.rowconfigure(1, weight=1)
-        tree_pane.columnconfigure(1, weight=1)
 
-        #self.ntbook.add(list_pane, text='BOM清单', sticky=NSEW)
-        self.ntbook.add(tree_pane, text='BOM树形结构', sticky=NSEW)
+        tree_pane.rowconfigure(3, weight=1)
+        tree_pane.columnconfigure(1, weight=1)
+        
+        tree_pane.grid(row=2, column=0, rowspan=6, columnspan=12, sticky=NSEW)
 
         log_pane = Frame(self)
 
@@ -205,15 +208,13 @@ class eds_pane(Frame):
         self.log_label["text"] = "操作记录"
         self.log_label.grid(row=0, column=0, sticky=W)
 
-        self.log_text = scrolledtext.ScrolledText(log_pane, state='disabled')
+        self.log_text = scrolledtext.ScrolledText(log_pane, state='disabled',height=10)
         self.log_text.config(font=('TkFixedFont', 10, 'normal'))
         self.log_text.grid(row=1, column=0, columnspan=2, sticky=EW)
         log_pane.rowconfigure(1, weight=1)
         log_pane.columnconfigure(1, weight=1)
 
-        self.ntbook.grid(row=2, column=0, rowspan=6,
-                         columnspan=12, sticky=NSEW)
-        log_pane.grid(row=8, column=0, rowspan=2, columnspan=12, sticky=NSEW)
+        log_pane.grid(row=8, column=0, columnspan=12, sticky=NSEW)
 
         # Create textLogger
         text_handler = TextHandler(self.log_text)
@@ -222,7 +223,7 @@ class eds_pane(Frame):
         logger.addHandler(text_handler)
         logger.setLevel(logging.INFO)
 
-        self.rowconfigure(8, weight=1)
+        self.rowconfigure(6, weight=1)
         self.columnconfigure(11, weight=1)
 
         if login_info['perm'][3] != '1' and login_info['perm'][3] != '9':
