@@ -5,7 +5,6 @@ Created on 2017年1月24日
 @author: 10256603
 '''
 from global_list import *
-from Cython.Compiler.Naming import defaults_struct_prefix
 global login_info
 
 logger = logging.getLogger()
