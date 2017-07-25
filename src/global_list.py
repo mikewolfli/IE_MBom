@@ -31,20 +31,22 @@ from openpyxl.styles import Border, Side, Font
 from openpyxl.worksheet.properties import WorksheetProperties, PageSetupProperties
 import xlrd
 import xlwt
-from xlutils.copy import copy
+from xlutils.copy import copy as sheet_copy
 from decimal import Decimal
 import pyrfc
 import threading
 import base64
 from configparser import ConfigParser
 import logging
+import copy
+import re
 
 login_info = {'uid': '', 'pwd': '', 'status': False,
               'perm': '000000', 'plant': '2101'}
 
 NAME = '非标物料处理 '
 PUBLISH_KEY = ' R '  # R - release , B - Beta , A- Alpha
-VERSION = '2.0.5'
+VERSION = '2.0.8'
 '''
 exman 程序集成到此版本中，exman终止。
 '''
@@ -331,7 +333,7 @@ prj_para_header = (('POSID','Work Breakdown Structure Element (WBS Element)'),
 '''
 
 def dict_has_key(di, key):
-    if key in di.keys():
+    if key in list(di):
         return True
     else:
         return False

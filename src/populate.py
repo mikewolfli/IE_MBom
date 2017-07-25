@@ -44,7 +44,28 @@ class Application(Frame):
         Frame.__init__(self, master)
         
         mbom_db.connect()
-        mbom_db.create_tables([working_date,])
+        
+        re = door_packing_mode.select().where((door_packing_mode.door_type=='S200')&(door_packing_mode.is_wooden==False))\
+            .order_by(door_packing_mode.box_id.asc())
+
+       
+        self.packing_mode = {}
+        for r in re:
+            s_s = {}
+            if r.packing_desc is not None:
+                s_s[1]=r.packing_desc.split(';')
+                
+            if r.packing_except is not None:
+                s_s[2] = r.packing_except.split(';')
+                
+            self.packing_mode[r.box_id]=s_s
+            
+        print(self.packing_mode)
+        for key in self.packing_mode:
+            print(key)
+            print(self.packing_mode[key])
+            
+        #mbom_db.create_tables([door_packing_mode,])
         #mbom_db.create_tables([plist_header,plist_items,mboxes_table,box_mat_logic,boxid_rp_rel])
         #mbom_db.create_tables([s_employee, operate_point, op_permission,login_log,nstd_app_head,nstd_app_link,nstd_mat_fin,nstd_mat_table])
         #nstd_mat_fin.get(nstd_mat_fin.mat_no=='330172045')

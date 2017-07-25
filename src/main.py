@@ -310,13 +310,13 @@ class mainframe(Frame):
                     self.wbs_bom_tab = wbs_bom_pane(self)
                     self.ntbook.add(self.wbs_bom_tab,
                                     text=nt_title, sticky=NSEW)
-                    self.tree.set(sel,'col0',i_sel)
+                    self.tree.set(sel, 'col0', i_sel)
                     self.ntbook.select(i_sel)
                     self.st_msg.set('')
                 else:
                     self.st_msg.set('没有权限')
                     return
-                    
+
         else:
             if int(s_perm[i_per]) <= 0:
                 self.st_msg.set('没有权限')
@@ -363,6 +363,7 @@ class Application():
             mbom_db.close()
 
         root.destroy()
+
 
 if __name__ == '__main__':
     root = Tk()

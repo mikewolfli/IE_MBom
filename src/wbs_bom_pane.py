@@ -84,21 +84,30 @@ class wbs_bom_pane(Frame):
         self.export_result.grid(row=2, column=5, sticky=EW)
         self.export_result['command'] = self.export_res
 
+        self.with_wbs_bom = BooleanVar()
         self.with_prj_info = BooleanVar()
         self.with_prj_para = BooleanVar()
-
+        
+        self.with_wbs_bom.set(True)
+        
+        check_wbs_bom = Checkbutton(self, text="显示WBS BOM", variable = self.with_wbs_bom,
+                                    onvalue = True, offvalue=False)
+        check_wbs_bom.grid(row=0, column=6, sticky=EW)
+        
         check_prj_info = Checkbutton(self, text="显示项目信息", variable=self.with_prj_info,
                                      onvalue=True, offvalue=False)
-        check_prj_info.grid(row=0, column=6, sticky=EW)
+        check_prj_info.grid(row=1, column=6, sticky=EW)
 
         check_prj_para = Checkbutton(self, text="显示项目参数", variable=self.with_prj_para,
                                      onvalue=True, offvalue=False)
+        
+        check_wbs_bom['command'] = self.with_wbs_bom_check
 
         check_prj_info['command'] = self.with_prj_info_check
 
         check_prj_para['command'] = self.with_prj_para_check
 
-        check_prj_para.grid(row=1, column=6, sticky=EW)
+        check_prj_para.grid(row=2, column=6, sticky=EW)
 
         self.ntbook = ttk.Notebook(self)
         self.ntbook.rowconfigure(0, weight=1)
@@ -154,8 +163,8 @@ class wbs_bom_pane(Frame):
 
         self.ntbook.add(self.wbs_tab, text='WBS BOM', sticky=NSEW)
         self.ntbook.grid(row=3, column=0, rowspan=12,
-                         columnspan=10, sticky='nsew')
-
+                         columnspan=10, sticky='nsew') 
+                      
         self.prj_info_tab = Frame(self)
 
         i_range = len(prj_info_header)
@@ -270,9 +279,6 @@ class wbs_bom_pane(Frame):
         self.mat_str.set(self.mates[0])
 
     def start_search(self):
-        if len(self.wbses) == 0 and len(self.mates) == 0:
-            return
-
         if self.data_thread is not None and self.data_thread.is_alive():
             messagebox.showinfo('提示', '表单刷新线程正在后台刷新列表，请等待完成后再点击!')
             return
@@ -293,8 +299,9 @@ class wbs_bom_pane(Frame):
 
     def clear_list(self):
         logger.info("正在清空列表...")
-        for row in self.wbs_list.get_children():
-            self.wbs_list.delete(row)
+        if self.with_wbs_bom.get():
+            for row in self.wbs_list.get_children():
+                self.wbs_list.delete(row)
 
         if self.with_prj_info.get():
             for row in self.prj_info_list.get_children():
@@ -305,7 +312,7 @@ class wbs_bom_pane(Frame):
                 self.prj_para_list.delete(row)
 
     def export_res(self):
-        if len(self.wbs_bom)==0:
+        if len(self.wbs_bom)==0 and len(self.prj_info_st)==0 and len(self.prj_para_st)==0:
             logger.info("查询结果为空，无法导出清单")
             return
         
@@ -319,16 +326,20 @@ class wbs_bom_pane(Frame):
 
         wb = Workbook()
         ws = wb.worksheets[0]
-        ws.title = 'WBS BOM清单'
-        col_size = len(wbs_headers)
-        for i in range(0, col_size):
-            ws.cell(row=1, column=i + 1).value = wbs_headers[i][1]
+        
+        if self.with_wbs_bom.get():
+            ws.title = 'WBS BOM清单'
+            col_size = len(wbs_headers)
+            for i in range(0, col_size):
+                ws.cell(row=1, column=i + 1).value = wbs_headers[i][1]
 
-        i_wbs_bom = len(self.wbs_bom)
+            i_wbs_bom = len(self.wbs_bom)
 
-        for i in range(1, i_wbs_bom + 1):
-            for j in range(0, col_size):
-                ws.cell(row=i + 1, column=j + 1).value = self.wbs_bom[i][j]
+            for i in range(1, i_wbs_bom + 1):
+                for j in range(0, col_size):
+                    ws.cell(row=i + 1, column=j + 1).value = self.wbs_bom[i][j]
+        else:
+            wb.remove(ws)
                 
         if self.with_prj_info.get():
             ws1=wb.create_sheet("项目基本信息")
@@ -356,17 +367,28 @@ class wbs_bom_pane(Frame):
 
     def with_prj_info_check(self):
         b_prj_info = self.with_prj_info.get()
-
+        
         if b_prj_info:
             self.ntbook.add(self.prj_info_tab)
+            self.ntbook.select(self.prj_info_tab)
         else:
             self.ntbook.hide(self.prj_info_tab)
+    
+    def with_wbs_bom_check(self):
+        b_wbs_bom = self.with_wbs_bom.get()
+        
+        if b_wbs_bom:
+            self.ntbook.add(self.wbs_tab)
+            self.ntbook.select(self.wbs_tab)
+        else:
+            self.ntbook.hide(self.wbs_tab)
 
     def with_prj_para_check(self):
         b_prj_para = self.with_prj_para.get()
 
         if b_prj_para:
             self.ntbook.add(self.prj_para_tab)
+            self.ntbook.select(self.prj_para_tab)
         else:
             self.ntbook.hide(self.prj_para_tab)
 
@@ -387,7 +409,12 @@ class wbs_bom_pane(Frame):
         self.wbs_bom = {}
         self.prj_info_st = {}
         self.prj_para_st = {}
+        wbs=None
 
+        if self.with_wbs_bom.get()==False and self.with_prj_info.get()==False and self.with_prj_para.get()==False:
+            logger.warning("请至少选择一项功能")
+            return 0           
+            
         self.clear_list()
 
         logger.info("正在登陆SAP...")
@@ -402,9 +429,13 @@ class wbs_bom_pane(Frame):
             logger.info("正在连接SAP...")
             conn = pyrfc.Connection(**para_conn)
 
-            wbs = self.refresh_wbs_bom(conn)
+            if self.with_wbs_bom.get():
+                wbs = self.refresh_wbs_bom(conn)
+            else:
+                wbs = self.wbses
 
             if wbs is None:
+                logger.warning('请输入WBS list')
                 return 0
 
             self.refresh_prj(conn, wbs)
@@ -552,13 +583,15 @@ class wbs_bom_pane(Frame):
     def update_tree(self):
         b_prj_info = self.with_prj_info.get()
         b_prj_para = self.with_prj_info.get()
+        b_wbs_bom = self.with_wbs_bom.get()
 
         l_wbs = len(self.wbs_bom)
-
-        logger.info("正在更新WBS BOM列表...")
-        for i in range(1, l_wbs + 1):
-            self.wbs_list.insert('', END, values=self.wbs_bom[i])
-        logger.info("WBS BOM列表更新完成.")
+        
+        if b_wbs_bom:
+            logger.info("正在更新WBS BOM列表...")
+            for i in range(1, l_wbs + 1):
+                self.wbs_list.insert('', END, values=self.wbs_bom[i])
+            logger.info("WBS BOM列表更新完成.")
 
         if b_prj_info:
             logger.info("正在更新项目基本信息列表...")

@@ -256,7 +256,7 @@ class eds_pane(Frame):
         temp_file = os.path.join(cur_dir(), 'PDMT1.xls')
         rb = xlrd.open_workbook(temp_file, formatting_info=True)
 
-        wb = copy(rb)
+        wb = sheet_copy(rb)
         ws = wb.get_sheet(0)
 
         #now = datetime.datetime.now()
@@ -941,10 +941,10 @@ TKEC.SJ-F-03-03'''
 
         logger.info('开始搜索匹配的物料号...')
         if len(self.version_var.get()) == 0:
-            res = mat_info.select(mat_info, bom_header.struct_code, bom_header.bom_id, bom_header.revision, bom_header.is_active).join(bom_header, on=(bom_header.mat_no == mat_info.mat_no)).where((mat_info.mat_no.contains(self.find_var.get())) & (bom_header.is_active == True))\
+            res = mat_info.select(mat_info, bom_header.struct_code, bom_header.bom_id, bom_header.revision, bom_header.is_active).join(bom_header, on=(bom_header.mat_no == mat_info.mat_no)).where((mat_info.mat_no.contains(self.find_var.get().strip())) & (bom_header.is_active == True))\
                 .order_by(mat_info.mat_no.asc()).naive()
         else:
-            res = mat_info.select(mat_info, bom_header.bom_id, bom_header.struct_code, bom_header.revision, bom_header.is_active).join(bom_header, on=(bom_header.mat_no == mat_info.mat_no)).where((mat_info.mat_no.contains(self.find_var.get())) & (bom_header.revision == self.version_var.get()) & (bom_header.is_active == True))\
+            res = mat_info.select(mat_info, bom_header.bom_id, bom_header.struct_code, bom_header.revision, bom_header.is_active).join(bom_header, on=(bom_header.mat_no == mat_info.mat_no)).where((mat_info.mat_no.contains(self.find_var.get().strip())) & (bom_header.revision == self.version_var.get()) & (bom_header.is_active == True))\
                 .order_by(mat_info.mat_no.asc()).naive()
 
         if not res:

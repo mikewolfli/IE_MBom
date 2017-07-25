@@ -20,8 +20,8 @@ mat_db_header = ['nstd_app', 'mat_no', 'mat_name_cn', 'mat_name_en', 'drawing_no
                  'mat_unit', 'comments', 'rp', 'box_code_sj', 'justify', 'app_person', 'old_mat_no','req_fin_on']
 
 
-def dic_to_list(m_dict):
-    m_list = []
+def dic_to_list(m_dict, i):
+    m_list = [i,]
 
     for c in col_header:
         if m_dict[c] is None:
@@ -101,34 +101,37 @@ class import_pane(Frame):
         self.wl_entry.bind("<Return>", self.wl_result)
 
         table_panel = Frame(self)
-        cols = ['col0', 'col1', 'col2', 'col3', 'col4', 'col5',
-                'col6', 'col7', 'col8', 'col9', 'col10', 'col11','col12']
+        cols = ['col1', 'col2', 'col3', 'col4', 'col5',
+                'col6', 'col7', 'col8', 'col9', 'col10', 'col11','col12','col13']
+        col_group = ['col0',]
+        col_group +=cols
         self.mat_table = ttk.Treeview(
-            table_panel, show='headings', columns=cols, selectmode='extended')
+            table_panel, show='headings', columns=col_group, selectmode='extended')
         style = ttk.Style()
         style.configure("Treeview", font=('TkDefaultFont', 10))
         style.configure("Treeview.Heading", font=('TkDefaultFont', 9))
-        self.mat_table.heading("#0", text='')
+        #self.mat_table.heading("#0", text='')
+        self.mat_table.heading('col0', text  ='序号')
         for col in cols:
             i = cols.index(col)
             #self.mat_table.heading(col, text=tree_head[i])
             self.mat_table.heading(col, text=col_header[
                                    i], command=lambda _col=col: treeview_sort_column(self.mat_table, _col, False))
 
-        # self.mat_table.column('#0', width=20)
-        self.mat_table.column('col0', width=100, anchor='w')
-        self.mat_table.column('col1', width=80, anchor='w')
-        self.mat_table.column('col2', width=100, anchor='w')
-        self.mat_table.column('col3', width=150, anchor='w')
+        self.mat_table.column('col0', width=20)
+        self.mat_table.column('col1', width=100, anchor='w')
+        self.mat_table.column('col2', width=80, anchor='w')
+        self.mat_table.column('col3', width=100, anchor='w')
         self.mat_table.column('col4', width=150, anchor='w')
-        self.mat_table.column('col5', width=100, anchor='w')
-        self.mat_table.column('col6', width=80, anchor='w')
-        self.mat_table.column('col7', width=200, anchor='w')
-        self.mat_table.column('col8', width=100, anchor='w')
+        self.mat_table.column('col5', width=150, anchor='w')
+        self.mat_table.column('col6', width=100, anchor='w')
+        self.mat_table.column('col7', width=80, anchor='w')
+        self.mat_table.column('col8', width=200, anchor='w')
         self.mat_table.column('col9', width=100, anchor='w')
         self.mat_table.column('col10', width=100, anchor='w')
         self.mat_table.column('col11', width=100, anchor='w')
         self.mat_table.column('col12', width=100, anchor='w')
+        self.mat_table.column('col13', width=100, anchor='w')
 
         ysb = ttk.Scrollbar(table_panel, orient='vertical',
                             command=self.mat_table.yview)
@@ -359,9 +362,9 @@ class import_pane(Frame):
             self.mat_table.delete(row)
 
         mats_length = len(self.mat_dic)
-
+        
         for i in range(1, mats_length + 1):
-            mat_value = dic_to_list(self.mat_dic[i])
+            mat_value = dic_to_list(self.mat_dic[i],i)
 
             self.mat_table.insert('', END, values=mat_value)
 
@@ -845,7 +848,7 @@ class import_pane(Frame):
 
                 if q.justify == 0 or ((q.justify == 1 or q.justify == 2 or q.justify == 6) and not q.pu_price_fin) or \
                         ((q.justify == 3 or q.justify == 4 or q.justify == 5) and not q.mbom_fin):
-                    q = nstd_mat_fin.update(justify=choice, modify_by=login_info['uid'],modify_on=datetime.datetime.now()).where(
+                    q = nstd_mat_fin.update(justify=choice, j_modify_by=login_info['uid'],j_modify_on=datetime.datetime.now()).where(
                         nstd_mat_fin.mat_no == mat)
                     i_r = q.execute()
 

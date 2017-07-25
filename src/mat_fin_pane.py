@@ -484,8 +484,9 @@ class mat_fin_pane(Frame):
 
         return True
 
-    def build_data_model(self, query_res):
+    def build_data_model(self, query_res):# fix bug cs/ie sap finish date
         i = 0
+        
         for r in query_res:
             item = []
             nstd_app_id = r.nstd_app

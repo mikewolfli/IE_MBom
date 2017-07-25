@@ -81,9 +81,9 @@ Nonstd_Level = {
 
 #mbom_db = PostgresqlDatabase('nstd_mat_db_test',user='postgres',password='1q2w3e4r',host='10.127.144.62',)
 
-mbom_db = PostgresqlDatabase('nstd_mat_db_dev',user='postgres',password='1q2w3e4r',host='localhost',)
-#mbom_db = PostgresqlDatabase(
-#                'nstd_mat_db', user='postgres', password='1q2w3e4r', host='10.127.144.62',)
+#mbom_db = PostgresqlDatabase('nstd_mat_db_dev',user='postgres',password='1q2w3e4r',host='localhost',)
+mbom_db = PostgresqlDatabase(
+               'nstd_mat_db', user='postgres', password='1q2w3e4r', host='10.127.144.62',)
 
 
 class BaseModel(Model):
@@ -263,6 +263,7 @@ class mat_info(BaseModel):
     box_code_sj = CharField(null=True, max_length=8)
     box_code_zs = CharField(null=True, max_length=8)
     is_nonstd = BooleanField(default=False)
+    is_packing_box = BooleanField(default=False)
     modify_by = CharField(null=True, max_length=12)
     modify_on = DateTimeField(formats='%Y-%m-%d %H:%M:%S', null=True)
 
@@ -372,7 +373,9 @@ class nstd_mat_fin(BaseModel):
     create_by = CharField(null=True, max_length=12)
     create_on = DateTimeField(formats='%Y-%m-%d %H:%M:%S', null=True)  
     active_by = CharField(null=True, max_length=12)
-    active_on = DateTimeField(formats='%Y-%m-%d %H:%M:%S', null=True)   
+    active_on = DateTimeField(formats='%Y-%m-%d %H:%M:%S', null=True)  
+    j_modify_by = CharField(null=True, max_length=12)
+    j_modify_on = DateTimeField(formats='%Y-%m-%d %H:%M:%S', null=True) 
 
     class Meta:
         db_table = 'nstd_mat_fin'
@@ -393,12 +396,14 @@ class plist_items(BaseModel):
     mat_no = CharField(max_length=18)
     mat_name = CharField(null=True, max_length=128)
     wbs_element = CharField(max_length=24)
+    is_packing_box = BooleanField(default=False)
     box_id = CharField(max_length=12)
     remarks = TextField(null=True)
     modify_by = CharField(null=True, max_length=12)
     modify_on = DateTimeField(formats='%Y-%m-%d %H:%M:%S', null=True)
     create_by = CharField(null=True, max_length=12)
     create_on = DateTimeField(formats='%Y-%m-%d %H:%M:%S', null=True)
+    qty = DecimalField(max_digits=10, decimal_places=2)
     
     class Meta:
         db_table = 'plist_items'
@@ -421,16 +426,16 @@ class mboxes_table(BaseModel):
 class box_mat_logic(BaseModel):
     mat_no = CharField(max_length=18)
     box_id = CharField(max_length=12)
-    self_prod = BooleanField()
+    self_prod = BooleanField(null=True)
     door_type = CharField(null=True, max_length=32)
     elevator_type = CharField(null=True, max_length=32)
     open_type = CharField(null=True, max_length=32)
     jamb_size = CharField(null=True, max_length=32)
-    fire_resist = BooleanField()
-    door_height_min = IntegerField()
-    door_height_max = IntegerField()
-    door_width_min = IntegerField()
-    door_width_max = IntegerField()
+    fire_resist = BooleanField(null=True)
+    door_height_min = IntegerField(null=True)
+    door_height_max = IntegerField(null=True)
+    door_width_min = IntegerField(null=True)
+    door_width_max = IntegerField(null=True)
     packing_qty_min = IntegerField()
     packing_qty_max = IntegerField()
        
@@ -438,14 +443,16 @@ class box_mat_logic(BaseModel):
         db_table = 'box_mat_logic'
          
          
-class boxid_rp_rel(BaseModel):
-    elevator_id = CharField(max_length=18)
+class door_packing_mode(BaseModel):
+    door_type = CharField(max_length=18)
     box_id = CharField(max_length=12)
-    activity  = CharField(max_length=6)
+    packing_desc  = CharField(max_length=64,null=True)
+    packing_except = CharField(max_length=64,null=True)
+    g_qty = IntegerField(null = True)
+    is_wooden = BooleanField(default=False)
     
     class Meta:
-        primary_key = CompositeKey('elevator_id', 'activity')
-        db_table = 'boxid_rp_rel'
+        db_table = 'door_packing_mode'
         
     
 pg_db = PostgresqlDatabase(
@@ -517,6 +524,8 @@ class UnitInfo(PgBaseModel):
     version = IntegerField(db_column='version_id', null=True)
     wbs_no = CharField(primary_key=True)
     wf_status = CharField(null=True)
+    old_status = IntegerField(null=True)
+    old_wf_status = CharField(null=True)
 
     class Meta:
         db_table = 's_unit_info'
