@@ -46,7 +46,7 @@ login_info = {'uid': '', 'pwd': '', 'status': False,
 
 NAME = '非标物料处理 '
 PUBLISH_KEY = ' R '  # R - release , B - Beta , A- Alpha
-VERSION = '2.0.8'
+VERSION = '3.0.0'
 '''
 exman 程序集成到此版本中，exman终止。
 '''

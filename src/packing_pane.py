@@ -17,6 +17,7 @@ xlsx_header = ['WBS Element', 'Material', 'Plant', 'BOM Usage', 'BOM item', 'Ite
 
 export_head = ['wbs no','箱号','物料号','数量','wbs element','备注','物料名称']
 old_packing_head = ['wbs_no','箱号','物料号']
+box_wbs_head = ['wbs_no', '整梯物料','物料号','数量','RP', '物料名称']
 
 def cell2str(val):
     if (val is None) or (val == 'N') or (val == '无') or (val == 'N/A'):
@@ -38,7 +39,7 @@ def id_to_box(id1):
 
     return a + '#-' + b
 
-
+    
 def box_to_id(box):
     box = box.strip()
     pos = box.find('#')
@@ -121,6 +122,7 @@ class packing_pane(Frame):
     boxes_mat_info = {}
     merge_boxes = {}
     pre_fill_boxes = {}
+    wbs_bom_boxes = {}
 
     def __init__(self, master=None):
         Frame.__init__(self, master)
@@ -302,6 +304,7 @@ class packing_pane(Frame):
         self.packing_bom={}
         self.merge_boxes={}
         self.subbox_text.delete('1.0',END)
+        self.wbs_bom_boxes = {}
 
         for row in self.wbs_list.get_children():
             self.wbs_list.delete(row)
@@ -514,6 +517,26 @@ class packing_pane(Frame):
             #ws1.cell(row=i_pos+1,  column=4).value =self.wbs_bom[key]['qty']
             i_pos+=1
             
+        ws2 = wb.create_sheet()
+        ws2.title = 'WBS BOM增加box list'
+        
+        col_size = len(box_wbs_head)
+        for i in range(col_size):
+            ws2.cell(row=1, column=i+1).value = box_wbs_head[i]
+        
+        keys  = sorted(self.wbs_bom_boxes.keys())
+        i_pos =1
+        for key in keys:
+            k_boxes = sorted(self.wbs_bom_boxes[key].keys())
+            for k_box in k_boxes:
+                ws2.cell(row=i_pos+1, column=1).value = self.wbs_bom_boxes[key][k_box]['wbs_no']
+                ws2.cell(row=i_pos+1, column=2).value = self.wbs_bom_boxes[key][k_box]['p_mat']
+                ws2.cell(row=i_pos+1, column=3).value = self.wbs_bom_boxes[key][k_box]['mat_no']
+                ws2.cell(row=i_pos+1, column=4).value = self.wbs_bom_boxes[key][k_box]['qty']
+                ws2.cell(row=i_pos+1, column=5).value = self.wbs_bom_boxes[key][k_box]['rp']
+                ws2.cell(row=i_pos+1, column=6).value = self.wbs_bom_boxes[key][k_box]['mat_name']
+                i_pos+=1
+                           
         if excel_xlsx.save_workbook(workbook=wb, filename=file_str):
             messagebox.showinfo("输出","成功输出!")        
                
@@ -546,20 +569,26 @@ class packing_pane(Frame):
         self.subbox_text.delete('1.0',END)
         self.subbox_text.insert(END, merg_str)   
             
-    def get_merge_comment(self, li, b_id):
+    def get_merge_comment(self, li_dic, b_id):
+        li = sorted(list(li_dic))
         i_len = len(li)
         s_str = ''
         s_in = ''
         s_in_wbs=''
+        s_qty=''
+        s_re = ''
         
         for i in range(0, i_len):
             s_wbs = li[i]
+            s_qty =str(int( li_dic[s_wbs]))
             if i ==0:
                 s_in = self.get_unit_no(s_wbs)
                 s_str = s_in
+                s_re = s_qty+'/'+s_in
                 s_in_wbs=s_wbs
             else:
-                s_str= s_str+','+self.get_unit_no(s_wbs)
+                s_str= s_str+','+ self.get_unit_no(s_wbs)
+                s_re= s_re+','+s_qty+'/'+self.get_unit_no(s_wbs)
                 items = sorted(self.packing_bom[s_wbs][b_id].keys())
                 
                 for itm in items:
@@ -567,6 +596,7 @@ class packing_pane(Frame):
             
             if i==i_len-1:
                 s_str = s_str+'并箱'
+                s_re= s_re+'并箱'
                 
         if len(s_in_wbs)>0:
             itms = sorted(self.packing_bom[s_in_wbs][b_id].keys())
@@ -576,7 +606,7 @@ class packing_pane(Frame):
                 else:
                     self.packing_bom[s_in_wbs][b_id][it]['remarks'] += s_str
         
-        return s_str
+        return s_re
             
     def clear_merge_boxes(self):
         keys = list(self.merge_boxes)
@@ -672,12 +702,20 @@ class packing_pane(Frame):
                 box_content = copy.deepcopy(r_packing_bom[key][box] )
                 b_infos = self.boxes_mat_info[key][box]
                 self.scan_box_content(box, box_content, b_infos)
-
+        
+        #print(self.merge_boxes)
+                  
+    def add_merge_box(self, line, key, qty):
+        if key not in list(line):
+            line[key] = qty
+        else:
+            line[key]+=qty
+            
     def scan_box_content(self, b_id, box_content, b_infos):
         #keys = sorted(box_content.keys())
         keys = sorted(list(box_content))
         #len_keys = len(keys)
-
+        
         c_lines = {}
         for key in keys:
             c_line = self.catalog_content(
@@ -720,6 +758,10 @@ class packing_pane(Frame):
             b_keys = sorted(b_infos.keys(), reverse=True) 
         else:
             b_keys = sorted(b_infos.keys()) 
+            
+        #pre_fill_boxes={}
+        s_item=''
+        line_merge_box={}
 
         for b_key in b_keys:
             b_mat = b_infos[b_key][0]
@@ -731,7 +773,8 @@ class packing_pane(Frame):
 
             while b_qty > 0:
                 box_keys = sorted(list(self.merge_boxes))
-                line_merge_box = []
+                #line_merge_box = []
+
                 for key in keys:
                     # if new_bid not in list(self.packing_bom[key]):
                     #    self.packing_bom[key][new_bid] = {}    
@@ -741,7 +784,10 @@ class packing_pane(Frame):
                     if b_hv:
                         items = list(c_lines[key])
                         i_len = len(items)
+                        
                         for item in items:
+                            if len(s_item)==0:
+                                s_item  = item
                             if b_c_max ==0  or  items.index(item)!=0:
                                 b_c_max = b_max
                                 
@@ -769,10 +815,10 @@ class packing_pane(Frame):
                                 p_id = len(self.packing_bom[key][new_bid])
 
                                 if p_id == 0 and b_c_max == b_mat_max:
-                                    box_line = self.get_box_mat_info(
-                                        key, b_mat)
-                                    self.packing_bom[key][new_bid][p_id +
-                                                                   1] = box_line
+                                    box_line = self.get_box_mat_info(key, b_mat)
+                                    self.packing_bom[key][new_bid][p_id +1] = box_line
+                                    self.get_box_mat_list(box_line)
+                                
                                     p_id += 1
 
                                 if i_len - 1 == items.index(item):
@@ -783,35 +829,43 @@ class packing_pane(Frame):
                                 box_content[key].pop(li)
                                 c_lines[key][item].pop(li)
 
-                                if key not in line_merge_box:
-                                    line_merge_box.append(key)
-
+                                #if key not in line_merge_box:
+                                #   line_merge_box.append(key)
+                                if s_item == item:
+                                    self.add_merge_box(line_merge_box, key, c_qty)
+                                '''
                                 if i_len - 1 == items.index(item):
-                                    if new_bid not in list(self.pre_fill_boxes):
-                                        self.pre_fill_boxes[new_bid] = []
+                                    if new_bid not in list(pre_fill_boxes):
+                                        pre_fill_boxes[new_bid] = []
                                         
-                                    if key not in self.pre_fill_boxes[new_bid]:
-                                        self.pre_fill_boxes[new_bid].append(key)
-                                        
+                                    if key not in pre_fill_boxes[new_bid]:
+                                        pre_fill_boxes[new_bid].append(key)
+                                '''        
                                 if keys.index(key) == len(keys) -1:
-                                    if key not in line_merge_box:
-                                        line_merge_box.append(key)
+                                    #if key not in line_merge_box:
+                                    #    line_merge_box.append(key)
 
                                     if i_len - 1 == items.index(item):
                                         b_max = b_c_max
 
                                         if new_bid not in box_keys:
                                             self.merge_boxes[new_bid] = []
-                                        if new_bid in list(self.pre_fill_boxes):
-                                            if key not in self.pre_fill_boxes[new_bid]:
-                                                self.pre_fill_boxes[new_bid].append(key)
+                                        
+                                        if line_merge_box not in self.merge_boxes[new_bid] and len(line_merge_box)>1:
+                                            self.merge_boxes[new_bid].append(line_merge_box.copy()) 
                                             
-                                            if self.pre_fill_boxes[new_bid] not in self.merge_boxes[new_bid]:
-                                                self.merge_boxes[new_bid].append(self.pre_fill_boxes[new_bid].copy())
-                                            self.pre_fill_boxes = {}
+                                        '''
+                                        if new_bid in list(pre_fill_boxes):
+                                            if key not in pre_fill_boxes[new_bid]:
+                                                pre_fill_boxes[new_bid].append(key)
+                                            
+                                            if pre_fill_boxes[new_bid] not in self.merge_boxes[new_bid]:
+                                                self.merge_boxes[new_bid].append(pre_fill_boxes[new_bid].copy())
+                                            pre_fill_boxes = {}
                                         else:
                                             if line_merge_box not in self.merge_boxes[new_bid]:
-                                                self.merge_boxes[new_bid].append(line_merge_box)                                 
+                                                self.merge_boxes[new_bid].append(line_merge_box)  
+                                        '''                               
 
                             else:
                                 c_lines[key][item][li] = c_lines[key][item][li] - rt * b_c_max
@@ -829,6 +883,7 @@ class packing_pane(Frame):
                                         key, b_mat)
                                     self.packing_bom[key][new_bid][p_id +
                                                                    1] = box_line
+                                    self.get_box_mat_list(box_line)
                                     p_id += 1
 
                                 self.packing_bom[key][new_bid][p_id +
@@ -836,34 +891,48 @@ class packing_pane(Frame):
                                 self.packing_bom[key][new_bid][p_id +
                                                                1]['qty'] = rt * b_c_max
                                 box_content[key][li]['qty'] = box_content[key][li]['qty'] - rt * b_c_max
-                                b_c_max = 0
+                                
                                 
                                 if box_content[key][li]['qty']==0.0:
                                     box_content[key].pop(li)
                                 
-                                if key not in line_merge_box:
-                                    line_merge_box.append(key)
+                                #if key not in line_merge_box:
+                                #    line_merge_box.append(key)
+                                if s_item == item:
+                                    self.add_merge_box(line_merge_box, key, b_c_max)
+                                    
+                                b_c_max = 0
 
                                 if i_len - 1 == items.index(item):
                                     b_max = b_c_max
 
                                     if new_bid not in box_keys:
                                         self.merge_boxes[new_bid] = []
-                                    if new_bid in list(self.pre_fill_boxes):
-                                        if key not in self.pre_fill_boxes[new_bid]:
-                                            self.pre_fill_boxes[new_bid].append(key)
+                                        
+                                    if line_merge_box not in self.merge_boxes[new_bid] and len(line_merge_box)>1:
+                                        self.merge_boxes[new_bid].append(line_merge_box.copy()) 
+                                        
+                                    '''
+                                    if new_bid in list(pre_fill_boxes):
+                                        if key not in pre_fill_boxes[new_bid]:
+                                            pre_fill_boxes[new_bid].append(key)
                                             
-                                        if self.pre_fill_boxes[new_bid] not in self.merge_boxes[new_bid]:
-                                            self.merge_boxes[new_bid].append(self.pre_fill_boxes[new_bid].copy())
-                                        self.pre_fill_boxes = {}
+                                        if pre_fill_boxes[new_bid] not in self.merge_boxes[new_bid]:
+                                            self.merge_boxes[new_bid].append(pre_fill_boxes[new_bid].copy())
+                                        pre_fill_boxes = {}
                                     else:
                                         if line_merge_box not in self.merge_boxes[new_bid]:
                                             self.merge_boxes[new_bid].append(line_merge_box)
+                                    '''
                     else:
                         items = list(c_lines[key])
                         i_len = len(items)
                         
+                        
                         for item in items:
+                            if len(s_item)==0:
+                                s_item=item
+                                
                             if b_c_max ==0  or  items.index(item)!=0:
                                 b_c_max = b_max
                             #lies = sorted(list(c_lines[key][item]))
@@ -889,6 +958,7 @@ class packing_pane(Frame):
                                         key, b_mat)
                                     self.packing_bom[key][new_bid][p_id +
                                                                    1] = box_line
+                                    self.get_box_mat_list(box_line)
                                     p_id += 1
                                 #b_c_max = b_c_max - rt*c_qty
                                     
@@ -904,16 +974,19 @@ class packing_pane(Frame):
 
                                 c_lines[key].pop(item)
 
-                                if key not in line_merge_box:
-                                    line_merge_box.append(key)
-
+                                #if key not in line_merge_box:
+                                #    line_merge_box.append(key)
+                                if s_item == item:
+                                    self.add_merge_box(line_merge_box, key, c_qty)
+                                
+                                '''
                                 if i_len - 1 == items.index(item):
-                                    if new_bid not in list(self.pre_fill_boxes):
-                                        self.pre_fill_boxes[new_bid] = []
+                                    if new_bid not in list(pre_fill_boxes):
+                                        pre_fill_boxes[new_bid] = []
                                     
-                                    if key not in self.pre_fill_boxes[new_bid]:
-                                        self.pre_fill_boxes[new_bid].append(key)
-                                        
+                                    if key not in pre_fill_boxes[new_bid]:
+                                        pre_fill_boxes[new_bid].append(key)
+                                '''        
                                 if keys.index(key) == len(keys) -1:
                                     if key not in line_merge_box:
                                         line_merge_box.append(key)
@@ -923,16 +996,22 @@ class packing_pane(Frame):
 
                                         if new_bid not in box_keys:
                                             self.merge_boxes[new_bid] = []
-                                        if new_bid in list(self.pre_fill_boxes):
-                                            if key not in self.pre_fill_boxes[new_bid]:
-                                                self.pre_fill_boxes[new_bid].append(key)
                                             
-                                            if self.pre_fill_boxes[new_bid] not in self.merge_boxes[new_bid]:
-                                                self.merge_boxes[new_bid].append(self.pre_fill_boxes[new_bid].copy())
-                                            self.pre_fill_boxes = {}
+                                        if line_merge_box not in self.merge_boxes[new_bid] and len(line_merge_box)>1:
+                                            self.merge_boxes[new_bid].append(line_merge_box.copy()) 
+                                            
+                                        '''
+                                        if new_bid in list(pre_fill_boxes):
+                                            if key not in pre_fill_boxes[new_bid]:
+                                                pre_fill_boxes[new_bid].append(key)
+                                            
+                                            if pre_fill_boxes[new_bid] not in self.merge_boxes[new_bid]:
+                                                self.merge_boxes[new_bid].append(pre_fill_boxes[new_bid].copy())
+                                            pre_fill_boxes = {}
                                         else:
                                             if line_merge_box not in self.merge_boxes[new_bid]:
-                                                self.merge_boxes[new_bid].append(line_merge_box)  
+                                                self.merge_boxes[new_bid].append(line_merge_box) 
+                                        ''' 
 
                             else:
                                 c_keys = sorted(list(c_lines[key][item]))
@@ -946,8 +1025,11 @@ class packing_pane(Frame):
                                         key, b_mat)
                                     self.packing_bom[key][new_bid][p_id +
                                                                    1] = box_line
+                                    self.get_box_mat_list(box_line)
                                     p_id += 1
 
+                                if s_item == item:
+                                    self.add_merge_box(line_merge_box, key, b_c_max)
                                   
                                 for c_key in c_keys:
                                     if c_lines[key][item][c_key] >= rt * b_c_max:
@@ -976,23 +1058,29 @@ class packing_pane(Frame):
 
                                     p_id += 1
 
-                                if key not in line_merge_box:
-                                    line_merge_box.append(key)
-
+                                #if key not in line_merge_box:
+                                #    line_merge_box.append(key)
+                                    
                                 if i_len - 1 == items.index(item):
                                     b_max = b_c_max
                                     if new_bid not in box_keys:
                                         self.merge_boxes[new_bid] = []
-                                    if new_bid in list(self.pre_fill_boxes):
-                                        if key not in self.pre_fill_boxes[new_bid]:
-                                            self.pre_fill_boxes[new_bid].append(key)
+                                        
+                                    if line_merge_box not in self.merge_boxes[new_bid] and len(line_merge_box)>1:
+                                        self.merge_boxes[new_bid].append(line_merge_box.copy())
+                                        
+                                    '''
+                                    if new_bid in list(pre_fill_boxes):
+                                        if key not in pre_fill_boxes[new_bid]:
+                                            pre_fill_boxes[new_bid].append(key)
                                             
-                                        if self.pre_fill_boxes[new_bid] not in self.merge_boxes[new_bid]:
-                                            self.merge_boxes[new_bid].append(self.pre_fill_boxes[new_bid].copy())
-                                        self.pre_fill_boxes = {}
+                                        if pre_fill_boxes[new_bid] not in self.merge_boxes[new_bid]:
+                                            self.merge_boxes[new_bid].append(pre_fill_boxes[new_bid].copy())
+                                        pre_fill_boxes = {}
                                     else:
                                         if line_merge_box not in self.merge_boxes[new_bid]:
                                             self.merge_boxes[new_bid].append(line_merge_box)
+                                    '''
 
                     if len(c_lines[key]) == 0:
                         c_lines.pop(key)
@@ -1003,18 +1091,46 @@ class packing_pane(Frame):
 
                     if b_max == 0:
                         break
-
+                
                 if b_max == 0:
                     b_qty -= 1
                     b_max = b_infos[b_key][2]
                     if len(keys)>0:
                         new_bid = b_id
+                        line_merge_box={}
                         while new_bid in self.packing_bom[keys[0]].keys():
                             new_bid = boxid_add(new_bid, 3)
 
                 if len(box_content) == 0:
                     break
-
+    
+    def get_box_mat_list(self, b_line):
+        wbs_no = b_line['wbs_no']
+        prod_mat = self.prj_info_st[wbs_no]['MATNR'][-9:]
+        b_mat = b_line['mat_no']
+        b_wbs = {}
+        
+        b_wbs['wbs_no'] = wbs_no
+        
+        b_wbs['mat_no'] = b_line['mat_no']
+        b_wbs['p_mat'] = prod_mat
+        b_wbs['qty'] = b_line['qty']
+        
+        if len(b_line['activity'])>0:
+            b_wbs['rp'] = 'A' + b_line['activity'][1:]
+        else:
+            b_wbs['rp'] = ''
+            
+        b_wbs['mat_name'] = b_line['mat_name']
+        
+        if wbs_no not in list(self.wbs_bom_boxes):
+            self.wbs_bom_boxes[wbs_no] = {}
+            
+        if b_mat not in list(self.wbs_bom_boxes[wbs_no]):
+            self.wbs_bom_boxes[wbs_no][b_mat] = b_wbs
+        else:
+            self.wbs_bom_boxes[wbs_no][b_mat]['qty'] += b_wbs['qty']
+              
     def get_min_item(self, lines):
         keys = sorted(lines.keys())
         i = 0
